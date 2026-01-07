@@ -1,0 +1,33 @@
+/* Tabs Component Styles */
+
+.tabs {
+    display: flex;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-secondary);
+    padding: 0 var(--spacing-xl);
+    height: 48px;
+    flex-shrink: 0;
+}
+
+.tab {
+    padding: var(--spacing-md) 20px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-medium);
+    color: #666;
+    border-bottom: 2px solid transparent;
+    transition: all var(--transition-base);
+}
+
+.tab:hover {
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+}
+
+.tab.active {
+    color: var(--text-primary);
+    border-bottom-color: var(--text-primary);
+}

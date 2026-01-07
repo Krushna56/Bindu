@@ -1,0 +1,89 @@
+/* CSS Custom Properties - Theme Variables */
+
+:root {
+    /* Colors - Primary */
+    --color-primary: #1a1a1a;
+    --color-secondary: #6b7280;
+    --color-accent: #10b981;
+    
+    /* Colors - Background */
+    --bg-primary: #fafafa;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #f8f8f8;
+    --bg-hover: #f9fafb;
+    
+    /* Colors - Border */
+    --border-primary: #e5e7eb;
+    --border-secondary: #e0e0e0;
+    --border-tertiary: #d1d5db;
+    
+    /* Colors - Text */
+    --text-primary: #1a1a1a;
+    --text-secondary: #6b7280;
+    --text-tertiary: #9ca3af;
+    --text-muted: #999;
+    --text-dark: #111827;
+    
+    /* Colors - Status */
+    --status-success: #10b981;
+    --status-error: #ff4444;
+    --status-warning: #fbbf24;
+    --status-info: #3b82f6;
+    
+    /* Colors - Context Badges */
+    --color-blue: #3b82f6;
+    --color-green: #10b981;
+    --color-purple: #8b5cf6;
+    --color-orange: #f97316;
+    --color-pink: #ec4899;
+    --color-teal: #14b8a6;
+    
+    /* Typography */
+    --font-family-mono: 'JetBrains Mono', monospace;
+    --font-family-sans: 'Inter', sans-serif;
+    
+    /* Font Sizes */
+    --font-size-xs: 10px;
+    --font-size-sm: 11px;
+    --font-size-base: 12px;
+    --font-size-md: 13px;
+    --font-size-lg: 14px;
+    --font-size-xl: 18px;
+    --font-size-2xl: 24px;
+    --font-size-3xl: 28px;
+    
+    /* Font Weights */
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    
+    /* Spacing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 12px;
+    --spacing-lg: 16px;
+    --spacing-xl: 24px;
+    --spacing-2xl: 32px;
+    
+    /* Border Radius */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.12);
+    --shadow-lg: 0 4px 20px rgba(0, 0, 0, 0.15);
+    
+    /* Transitions */
+    --transition-fast: 0.15s ease;
+    --transition-base: 0.2s ease;
+    --transition-slow: 0.3s ease;
+    
+    /* Z-Index */
+    --z-modal: 2000;
+    --z-overlay: 1000;
+    --z-dropdown: 100;
+    --z-header: 10;
+}

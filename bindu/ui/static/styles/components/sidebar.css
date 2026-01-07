@@ -1,0 +1,182 @@
+/* Context Sidebar Component Styles */
+
+.context-sidebar {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-secondary);
+    overflow: hidden;
+}
+
+.sidebar-header {
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--border-secondary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-secondary);
+    flex-shrink: 0;
+}
+
+.sidebar-header h3 {
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-dark);
+    margin: 0;
+}
+
+.new-chat-btn {
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--text-primary);
+    color: var(--bg-secondary);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.new-chat-btn:hover {
+    background: #000000;
+    box-shadow: var(--shadow-md);
+}
+
+.context-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--spacing-md);
+}
+
+.context-item {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-secondary);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.context-item:hover {
+    background: var(--bg-hover);
+    border-color: var(--text-tertiary);
+    box-shadow: var(--shadow-sm);
+}
+
+.context-item.active {
+    background: var(--text-primary);
+    border-color: var(--text-primary);
+    color: var(--bg-secondary);
+}
+
+.context-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-sm);
+}
+
+.context-badge {
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    color: var(--bg-secondary);
+}
+
+.context-badge.color-blue { background: var(--color-blue); }
+.context-badge.color-green { background: var(--color-green); }
+.context-badge.color-purple { background: var(--color-purple); }
+.context-badge.color-orange { background: var(--color-orange); }
+.context-badge.color-pink { background: var(--color-pink); }
+.context-badge.color-teal { background: var(--color-teal); }
+
+.context-time {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    font-family: var(--font-family-mono);
+}
+
+.context-item.active .context-time {
+    color: #ccc;
+}
+
+.context-clear-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-base);
+}
+
+.context-clear-btn:hover {
+    background: #ffebee;
+    color: var(--status-error);
+}
+
+.context-item.active .context-clear-btn {
+    color: #ccc;
+}
+
+.context-item.active .context-clear-btn:hover {
+    background: var(--status-error);
+    color: var(--bg-secondary);
+}
+
+.context-preview {
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: var(--spacing-sm);
+}
+
+.context-item.active .context-preview {
+    color: var(--bg-secondary);
+}
+
+.context-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--spacing-sm);
+    padding-top: var(--spacing-sm);
+    border-top: 1px solid #f0f0f0;
+}
+
+.context-item.active .context-footer {
+    border-top-color: #333;
+}
+
+.context-tasks {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    font-weight: var(--font-weight-medium);
+}
+
+.context-item.active .context-tasks {
+    color: #ccc;
+}
+
+.context-id-label {
+    font-size: 9px;
+    color: #bbb;
+    font-family: var(--font-family-mono);
+}
+
+.context-item.active .context-id-label {
+    color: #888;
+}

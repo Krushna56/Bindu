@@ -1,0 +1,68 @@
+/* Footer Component Styles */
+
+.footer {
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-secondary);
+    padding: var(--spacing-lg) var(--spacing-2xl);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    min-height: 60px;
+}
+
+.footer-left {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.footer-protocol {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-base);
+    color: var(--text-secondary);
+}
+
+.footer-protocol .dot {
+    width: 6px;
+    height: 6px;
+    background: var(--status-success);
+    border-radius: 50%;
+}
+
+.footer-right {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+}
+
+.footer-link {
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-base);
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color var(--transition-base);
+}
+
+.footer-link:hover {
+    color: var(--text-primary);
+}
+
+.footer-made {
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-base);
+    color: var(--text-tertiary);
+}
+
+.footer-made a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color var(--transition-base);
+}
+
+.footer-made a:hover {
+    color: var(--text-primary);
+}

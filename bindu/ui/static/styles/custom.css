@@ -1,0 +1,154 @@
+/* Custom CSS for Tailwind Migration - Animations and Special Cases */
+
+/* Animations */
+@keyframes pulse-green {
+    0%, 100% { 
+        opacity: 1; 
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); 
+    }
+    50% { 
+        opacity: 0.8; 
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0); 
+    }
+}
+
+@keyframes thinking-dot {
+    0%, 20% { opacity: 0.3; }
+    50% { opacity: 1; }
+    100% { opacity: 0.3; }
+}
+
+.animate-pulse-green {
+    animation: pulse-green 2s ease-in-out infinite;
+}
+
+.thinking-dots span {
+    animation: thinking-dot 1.4s infinite;
+}
+
+.thinking-dots span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.thinking-dots span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+/* Collapsible sections */
+.section-content.expanded {
+    max-height: 2000px !important;
+    padding: 0 1rem 1rem 1rem !important;
+}
+
+.section-content.collapsed {
+    max-height: 0 !important;
+    padding: 0 !important;
+}
+
+.section-header .toggle-icon {
+    transition: transform 0.3s ease;
+}
+
+.section-header.collapsed .toggle-icon {
+    transform: rotate(-90deg);
+}
+
+/* Tab switching */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: flex !important;
+}
+
+.tab.active {
+    color: #1a1a1a !important;
+    border-bottom-color: #1a1a1a !important;
+}
+
+/* Modal display */
+.modal, .skill-modal {
+    display: none;
+}
+
+.modal.flex, .skill-modal.flex {
+    display: flex !important;
+}
+
+/* Reply indicator */
+.reply-indicator {
+    display: none;
+}
+
+.reply-indicator.visible {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Error display */
+.error {
+    display: none;
+}
+
+.error:not(:empty) {
+    display: block !important;
+}
+
+/* Markdown content styling */
+.message-content h1,
+.message-content h2,
+.message-content h3 {
+    font-weight: 600;
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+}
+
+.message-content h1 { font-size: 1.5em; }
+.message-content h2 { font-size: 1.3em; }
+.message-content h3 { font-size: 1.1em; }
+
+.message-content p {
+    margin-bottom: 0.75em;
+}
+
+.message-content ul,
+.message-content ol {
+    margin-left: 1.5em;
+    margin-bottom: 0.75em;
+}
+
+.message-content code {
+    background: #f3f4f6;
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+.message-content pre {
+    background: #1a1a1a;
+    color: #f3f4f6;
+    padding: 1em;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin-bottom: 1em;
+}
+
+.message-content pre code {
+    background: transparent;
+    padding: 0;
+    color: inherit;
+}
+
+.message-content a {
+    color: #3b82f6;
+    text-decoration: underline;
+}
+
+.message-content blockquote {
+    border-left: 3px solid #e5e7eb;
+    padding-left: 1em;
+    margin-left: 0;
+    color: #6b7280;
+}

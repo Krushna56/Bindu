@@ -1,0 +1,60 @@
+/* Base Styles - Reset, Layout, Typography */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family-mono);
+    background: var(--bg-primary);
+    height: 100vh;
+    color: var(--text-primary);
+    font-size: var(--font-size-lg);
+    overflow: hidden;
+}
+
+.container {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.tab-content {
+    display: none;
+    flex: 1;
+    overflow: hidden;
+}
+
+.tab-content.active {
+    display: flex;
+    flex-direction: column;
+}
+
+.loading {
+    color: var(--text-tertiary);
+    font-size: var(--font-size-sm);
+    text-align: center;
+    padding: var(--spacing-md);
+}
+
+.error {
+    display: none;
+    background: #fee;
+    color: #c00;
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+    margin: var(--spacing-sm) 0;
+    font-size: var(--font-size-base);
+}
