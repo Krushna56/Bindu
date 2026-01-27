@@ -1,9 +1,15 @@
-"""OAuth token refresh utility (v0)."""
+"""User OAuth token management utilities (v0).
+
+This module provides utilities for managing user OAuth tokens for third-party
+services (Notion, Gmail, GitHub, etc.). Tokens are stored in Vault and
+automatically refreshed when expired.
+"""
 
 from __future__ import annotations
 
 from datetime import datetime, timedelta
 from typing import Optional
+from urllib.parse import urlparse
 
 from bindu.auth.oauth.providers import get_provider_config
 from bindu.auth.vault.oauth_storage import OAuthVaultStorage
@@ -11,7 +17,7 @@ from bindu.settings import app_settings
 from bindu.utils.http_client import http_client
 from bindu.utils.logging import get_logger
 
-logger = get_logger("bindu.auth.oauth.token_refresh")
+logger = get_logger("bindu.utils.user_oauth_utils")
 
 
 async def get_valid_token(user_id: str, provider: str) -> str:
@@ -19,7 +25,7 @@ async def get_valid_token(user_id: str, provider: str) -> str:
 
     Args:
         user_id: User identifier
-        provider: OAuth provider name
+        provider: OAuth provider name (notion, gmail, github)
 
     Returns:
         Valid access token
@@ -93,7 +99,6 @@ async def refresh_token(user_id: str, provider: str, current_tokens: Optional[di
     try:
         async with http_client(base_url=config["token_url"]) as client:
             # Parse token URL to get just the path
-            from urllib.parse import urlparse
             parsed = urlparse(config["token_url"])
             path = parsed.path or "/"
 

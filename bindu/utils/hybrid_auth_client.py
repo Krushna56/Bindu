@@ -15,7 +15,7 @@ from bindu.auth.hydra.registration import load_agent_credentials
 from bindu.utils.did_signature import create_signed_request_headers
 from bindu.utils.http_client import AsyncHTTPClient
 from bindu.utils.logging import get_logger
-from bindu.utils.token_utils import get_client_credentials_token
+from bindu.utils.agent_token_utils import get_client_credentials_token
 
 logger = get_logger("bindu.utils.hybrid_auth_client")
 
