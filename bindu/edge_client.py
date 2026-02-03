@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import base64
+import gzip
 import json
 import logging
 import time
@@ -29,34 +30,156 @@ import websockets
 log = logging.getLogger("bindu.edge_client")
 
 
-async def forward_request_to_local(local_port: int, req: Dict[str, Any], timeout: int = 30) -> Dict[str, Any]:
+async def forward_request_to_local(local_port: int, req: Dict[str, Any], timeout: int = 60) -> Dict[str, Any]:
     method = req.get("method", "GET")
     path = req.get("path", "/")
     headers = req.get("headers", {}) or {}
     body = req.get("body")
-    data = body.encode() if body else None
+    req_id = req.get("request_id", "unknown")
+    
+    log.info(f"[{req_id}] Forwarding {method} {path}")
+    
+    # Handle request body - support both string and base64-encoded binary
+    request_body_bytes = None
+    if body:
+        if isinstance(body, str):
+            # Check if it's base64 encoded (from a binary request)
+            if req.get("body_encoding") == "base64":
+                try:
+                    request_body_bytes = base64.b64decode(body)
+                    log.debug(f"[{req_id}] Decoded base64 request body: {len(request_body_bytes)} bytes")
+                except Exception as e:
+                    log.warning(f"[{req_id}] Failed to decode base64 body: {e}")
+                    request_body_bytes = body.encode("utf-8")
+            else:
+                request_body_bytes = body.encode("utf-8")
+                log.debug(f"[{req_id}] Request body: {len(request_body_bytes)} bytes")
+        else:
+            request_body_bytes = body
 
     url = f"http://127.0.0.1:{local_port}{path}"
+    start_time = time.time()
+    
     async with httpx.AsyncClient(timeout=timeout) as client:
         try:
-            resp = await client.request(method, url, headers=headers, content=data)
+            resp = await client.request(method, url, headers=headers, content=request_body_bytes)
+            elapsed = time.time() - start_time
+            log.info(f"[{req_id}] Local server responded: {resp.status_code} in {elapsed:.2f}s")
         except Exception as e:
-            log.exception("Error forwarding request to local server")
+            elapsed = time.time() - start_time
+            log.exception(f"[{req_id}] Error forwarding request to local server after {elapsed:.2f}s")
             return {
                 "type": "response",
                 "request_id": req.get("request_id"),
                 "status": 502,
                 "headers": {"content-type": "text/plain"},
                 "body": f"Agent error: {str(e)}",
+                "body_encoding": "text",
             }
 
-    return {
+    # Determine if response is binary or text based on content-type
+    content_type = resp.headers.get("content-type", "").lower()
+    is_binary = _is_binary_content_type(content_type)
+    
+    # Handle response body - encode binary as base64, text as string
+    response_body = None
+    body_encoding = "text"
+    
+    if is_binary:
+        # Binary content - encode as base64
+        response_body = base64.b64encode(resp.content).decode("ascii")
+        body_encoding = "base64"
+        log.info(f"[{req_id}] Binary response (content-type: {content_type}), encoding as base64 ({len(resp.content)} bytes -> {len(response_body)} chars)")
+    else:
+        # Text content - use as string
+        try:
+            response_body = resp.text
+            log.debug(f"[{req_id}] Text response ({len(response_body)} chars)")
+        except Exception as e:
+            # If text decoding fails, treat as binary
+            log.warning(f"[{req_id}] Failed to decode response as text, treating as binary: {e}")
+            response_body = base64.b64encode(resp.content).decode("ascii")
+            body_encoding = "base64"
+    
+    # Log response headers for debugging
+    log.debug(f"[{req_id}] Response headers: {dict(resp.headers)}")
+
+    # Build response payload
+    response_payload = {
         "type": "response",
         "request_id": req.get("request_id"),
         "status": resp.status_code,
         "headers": dict(resp.headers),
-        "body": resp.text,
+        "body": response_body,
+        "body_encoding": body_encoding,
     }
+    
+    # Apply compression for large payloads (>1KB)
+    payload_json = json.dumps(response_payload)
+    payload_size = len(payload_json.encode("utf-8"))
+    
+    # Warn about very large payloads
+    max_recommended_size = 10 * 1024 * 1024  # 10MB
+    if payload_size > max_recommended_size:
+        log.warning(f"[{req_id}] Very large response payload: {payload_size / (1024*1024):.1f}MB - may cause issues")
+    
+    if payload_size > 1024:  # Compress if > 1KB
+        compressed = gzip.compress(payload_json.encode("utf-8"))
+        compression_ratio = 100 * len(compressed) / payload_size
+        if len(compressed) < payload_size * 0.9:  # Only use if saves >10%
+            log.info(f"[{req_id}] Compressed response: {payload_size} -> {len(compressed)} bytes ({compression_ratio:.1f}%)")
+            return {
+                "type": "response",
+                "request_id": req.get("request_id"),
+                "compressed": True,
+                "data": base64.b64encode(compressed).decode("ascii"),
+            }
+        else:
+            log.debug(f"[{req_id}] Compression not beneficial: {compression_ratio:.1f}%")
+    
+    log.debug(f"[{req_id}] Returning uncompressed payload: {payload_size} bytes")
+    return response_payload
+
+
+def _is_binary_content_type(content_type: str) -> bool:
+    """Determine if a content-type represents binary data."""
+    # Text-based content types
+    text_types = [
+        "text/",
+        "application/json",
+        "application/javascript",
+        "application/xml",
+        "application/x-www-form-urlencoded",
+        "application/ld+json",
+        "application/rdf+xml",
+        "application/soap+xml",
+    ]
+    
+    # Check if it's a known text type
+    for text_type in text_types:
+        if text_type in content_type:
+            return False
+    
+    # Binary types (images, videos, documents, etc.)
+    binary_types = [
+        "image/",
+        "video/",
+        "audio/",
+        "application/pdf",
+        "application/octet-stream",
+        "application/zip",
+        "application/gzip",
+        "application/x-tar",
+        "application/vnd.",  # Various vendor-specific formats
+        "font/",
+    ]
+    
+    for binary_type in binary_types:
+        if binary_type in content_type:
+            return True
+    
+    # Default to text for unknown types
+    return False
 
 
 async def send_ping(ws, interval: int = 10):
@@ -92,7 +215,21 @@ async def run_client(ws_url: str, token: str, local_port: int, reconnect: bool =
                         # forward to local agent
                         req_id = msg.get("request_id", "unknown")
                         log.info("Received request: %s %s (req_id=%s)", msg.get("method"), msg.get("path"), req_id)
-                        resp_payload = await forward_request_to_local(local_port, msg)
+                        
+                        # Forward with timeout handling
+                        try:
+                            resp_payload = await forward_request_to_local(local_port, msg)
+                        except asyncio.TimeoutError:
+                            log.error(f"Timeout forwarding request to local agent (req_id={req_id})")
+                            resp_payload = {
+                                "type": "response",
+                                "request_id": req_id,
+                                "status": 504,
+                                "headers": {"content-type": "text/plain"},
+                                "body": "Gateway Timeout: Local agent took too long to respond",
+                                "body_encoding": "text",
+                            }
+                        
                         log.info("Sending response: status=%s (req_id=%s)", resp_payload.get("status"), req_id)
                         try:
                             await ws.send(json.dumps(resp_payload))
