@@ -372,6 +372,65 @@ Output:
 
 <br/>
 
+## 🌐 Edge Client - Stel je Lokale Agent Bloot aan het Internet
+
+Maak je lokaal draaiende agent toegankelijk op het internet **zonder te deployen** - perfect voor ontwikkeling, testen en snelle demo's. De Bindu Edge Client creëert een veilige tunnel van je lokale machine naar het internet met behulp van WebSocket-verbindingen.
+
+### 🎯 Gebruikssituaties
+
+- **Snel Testen**: Deel je lokale agent met anderen zonder te deployen
+- **Ontwikkeling**: Test webhooks en integraties die publieke URL's vereisen
+- **Demo's**: Laat je agent die op je lokale machine draait zien aan klanten
+- **Debuggen**: Test je agent in een productie-achtige omgeving
+
+### 🚀 Snelle Installatie
+
+**Stap 1: Maak een Tunnel**
+
+Bezoek [bindus.directory](https://bindus.directory) en:
+1. Log in op je account
+2. Navigeer naar de tunnels-sectie
+3. Maak een nieuwe tunnel
+
+Je ontvangt:
+- **ws_url**: WebSocket URL voor de tunnelverbinding
+- **token**: Authenticatietoken voor veilige toegang
+- **public_url**: De publieke internet-URL van je agent
+
+**Stap 2: Configureer je Lokale Agent**
+
+Maak een `edge.config.json` bestand in je projectmap:
+
+```json
+{
+  "ws_url": "your_ws_url",
+  "token": "your_tunnel_token",
+  "local_port": 3773
+}
+```
+
+> **Opmerking:** `local_port` is standaard `3773` (Bindu's standaardpoort). Wijzig dit als je agent op een andere poort draait.
+
+**Stap 3: Start de Edge Client**
+
+Zorg ervoor dat je agent lokaal draait, en start dan de edge client:
+
+```bash
+uv run python -m bindu.edge_client
+```
+
+**Dat is alles!** 🎉 Je agent is nu toegankelijk op het internet op de `public_url` die tijdens het aanmaken van de tunnel is verstrekt.
+
+### 🔒 Beveiliging
+
+- Alle verbindingen zijn beveiligd met token-gebaseerde authenticatie
+- WebSocket-verbindingen gebruiken veilige protocollen
+- Alleen geautoriseerde verzoeken worden doorgestuurd naar je lokale agent
+
+---
+
+<br/>
+
 ## [Postgres Storage](https://docs.getbindu.com/bindu/learn/storage/overview)
 
 Bindu gebruikt PostgreSQL als zijn persistente storage backend voor productie-implementaties. De storage layer is gebouwd met SQLAlchemy's async engine en gebruikt imperatieve mapping met protocol TypeDicts.

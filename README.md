@@ -413,6 +413,65 @@ Output:
 
 <br/>
 
+## 🌐 Edge Client - Expose Your Local Agent to the Internet
+
+Make your locally running agent accessible on the internet **without deploying** - perfect for development, testing, and quick demos. The Bindu Edge Client creates a secure tunnel from your local machine to the internet using WebSocket connections.
+
+### 🎯 Use Cases
+
+- **Quick Testing**: Share your local agent with others without deployment
+- **Development**: Test webhooks and integrations that require public URLs
+- **Demos**: Showcase your agent running on your local machine to clients
+- **Debugging**: Test your agent in a production-like environment
+
+### 🚀 Quick Setup
+
+**Step 1: Create a Tunnel**
+
+Visit [bindus.directory](https://bindus.directory) and:
+1. Log in to your account
+2. Navigate to the tunnels section
+3. Create a new tunnel
+
+You'll receive:
+- **ws_url**: WebSocket URL for the tunnel connection
+- **token**: Authentication token for secure access
+- **public_url**: Your agent's public internet URL
+
+**Step 2: Configure Your Local Agent**
+
+Create an `edge.config.json` file in your project directory:
+
+```json
+{
+  "ws_url": "your_ws_url",
+  "token": "your_tunnel_token",
+  "local_port": 3773
+}
+```
+
+> **Note:** `local_port` defaults to `3773` (Bindu's default port). Change this if your agent runs on a different port.
+
+**Step 3: Start the Edge Client**
+
+Make sure your agent is running locally, then start the edge client:
+
+```bash
+uv run python -m bindu.edge_client
+```
+
+**That's it!** 🎉 Your agent is now accessible on the internet at the `public_url` provided during tunnel creation.
+
+### 🔒 Security
+
+- All connections are secured with token-based authentication
+- WebSocket connections use secure protocols
+- Only authorized requests are forwarded to your local agent
+
+---
+
+<br/>
+
 ## [Postgres Storage](https://docs.getbindu.com/bindu/learn/storage/overview)
 
 Bindu uses PostgreSQL as its persistent storage backend for production deployments. The storage layer is built with SQLAlchemy's async engine and uses imperative mapping with protocol TypedDicts.

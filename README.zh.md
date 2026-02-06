@@ -372,6 +372,65 @@ curl --location 'http://localhost:3773/' \
 
 <br/>
 
+## 🌐 Edge Client - 将本地代理暴露到互联网
+
+让您的本地运行的代理在互联网上可访问，**无需部署** - 非常适合开发、测试和快速演示。Bindu Edge Client 使用 WebSocket 连接从您的本地机器创建一个安全隧道到互联网。
+
+### 🎯 使用场景
+
+- **快速测试**: 无需部署即可与他人共享您的本地代理
+- **开发**: 测试需要公共 URL 的 webhook 和集成
+- **演示**: 向客户展示在本地机器上运行的代理
+- **调试**: 在类生产环境中测试您的代理
+
+### 🚀 快速设置
+
+**步骤 1: 创建隧道**
+
+访问 [bindus.directory](https://bindus.directory) 并:
+1. 登录您的账户
+2. 导航到隧道部分
+3. 创建一个新隧道
+
+您将收到:
+- **ws_url**: 隧道连接的 WebSocket URL
+- **token**: 安全访问的身份验证令牌
+- **public_url**: 您的代理的公共互联网 URL
+
+**步骤 2: 配置本地代理**
+
+在您的项目目录中创建一个 `edge.config.json` 文件:
+
+```json
+{
+  "ws_url": "your_ws_url",
+  "token": "your_tunnel_token",
+  "local_port": 3773
+}
+```
+
+> **注意:** `local_port` 默认为 `3773`（Bindu 的默认端口）。如果您的代理在不同端口上运行，请更改此设置。
+
+**步骤 3: 启动 Edge Client**
+
+确保您的代理在本地运行，然后启动 edge client:
+
+```bash
+uv run python -m bindu.edge_client
+```
+
+**就是这样!** 🎉 您的代理现在可以在创建隧道时提供的 `public_url` 上通过互联网访问。
+
+### 🔒 安全性
+
+- 所有连接都通过基于令牌的身份验证进行保护
+- WebSocket 连接使用安全协议
+- 只有经过授权的请求才会转发到您的本地代理
+
+---
+
+<br/>
+
 ## [Postgres Storage](https://docs.getbindu.com/bindu/learn/storage/overview)
 
 Bindu 使用 PostgreSQL 作为生产部署的持久存储后端。存储层使用 SQLAlchemy 的异步引擎构建，并使用 protocol TypedDicts 的命令式映射。
