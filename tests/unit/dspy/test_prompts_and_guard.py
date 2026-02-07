@@ -59,7 +59,9 @@ class TestGetActivePrompt:
         """Test DID is passed to storage."""
         mock_storage.get_active_prompt.return_value = None
 
-        with patch("bindu.dspy.prompts.PostgresStorage", return_value=mock_storage) as mock_cls:
+        with patch(
+            "bindu.dspy.prompts.PostgresStorage", return_value=mock_storage
+        ) as mock_cls:
             await get_active_prompt(did="did:test")
             mock_cls.assert_called_once_with(did="did:test")
 
@@ -207,7 +209,9 @@ class TestEnsureSystemStable:
     @pytest.mark.asyncio
     async def test_ensure_stable_no_candidate(self, mock_storage):
         """Test passes if no candidate."""
-        with patch("bindu.dspy.guard.get_candidate_prompt", new_callable=AsyncMock) as mock_get:
+        with patch(
+            "bindu.dspy.guard.get_candidate_prompt", new_callable=AsyncMock
+        ) as mock_get:
             mock_get.return_value = None
 
             # Should not raise
@@ -216,7 +220,9 @@ class TestEnsureSystemStable:
     @pytest.mark.asyncio
     async def test_ensure_stable_with_candidate_raises(self, mock_storage):
         """Test raises RuntimeError if candidate exists."""
-        with patch("bindu.dspy.guard.get_candidate_prompt", new_callable=AsyncMock) as mock_get:
+        with patch(
+            "bindu.dspy.guard.get_candidate_prompt", new_callable=AsyncMock
+        ) as mock_get:
             mock_get.return_value = {"id": 2, "status": "candidate"}
 
             with pytest.raises(RuntimeError, match="DSPy training blocked"):
@@ -225,7 +231,9 @@ class TestEnsureSystemStable:
     @pytest.mark.asyncio
     async def test_ensure_stable_uses_provided_storage(self, mock_storage):
         """Test uses provided storage."""
-        with patch("bindu.dspy.guard.get_candidate_prompt", new_callable=AsyncMock) as mock_get:
+        with patch(
+            "bindu.dspy.guard.get_candidate_prompt", new_callable=AsyncMock
+        ) as mock_get:
             mock_get.return_value = None
 
             await ensure_system_stable(storage=mock_storage)
@@ -234,7 +242,9 @@ class TestEnsureSystemStable:
     @pytest.mark.asyncio
     async def test_ensure_stable_uses_did(self, mock_storage):
         """Test DID is passed to get_candidate_prompt."""
-        with patch("bindu.dspy.guard.get_candidate_prompt", new_callable=AsyncMock) as mock_get:
+        with patch(
+            "bindu.dspy.guard.get_candidate_prompt", new_callable=AsyncMock
+        ) as mock_get:
             mock_get.return_value = None
 
             await ensure_system_stable(did="did:test")
@@ -247,8 +257,13 @@ class TestSelectPromptWithCanary:
     @pytest.mark.asyncio
     async def test_select_no_prompts(self, mock_storage):
         """Test returns None if no prompts."""
-        with patch("bindu.dspy.prompt_selector.get_active_prompt", new_callable=AsyncMock) as mock_active:
-            with patch("bindu.dspy.prompt_selector.get_candidate_prompt", new_callable=AsyncMock) as mock_candidate:
+        with patch(
+            "bindu.dspy.prompt_selector.get_active_prompt", new_callable=AsyncMock
+        ) as mock_active:
+            with patch(
+                "bindu.dspy.prompt_selector.get_candidate_prompt",
+                new_callable=AsyncMock,
+            ) as mock_candidate:
                 mock_active.return_value = None
                 mock_candidate.return_value = None
 
@@ -258,8 +273,13 @@ class TestSelectPromptWithCanary:
     @pytest.mark.asyncio
     async def test_select_only_active(self, mock_storage):
         """Test returns active if no candidate."""
-        with patch("bindu.dspy.prompt_selector.get_active_prompt", new_callable=AsyncMock) as mock_active:
-            with patch("bindu.dspy.prompt_selector.get_candidate_prompt", new_callable=AsyncMock) as mock_candidate:
+        with patch(
+            "bindu.dspy.prompt_selector.get_active_prompt", new_callable=AsyncMock
+        ) as mock_active:
+            with patch(
+                "bindu.dspy.prompt_selector.get_candidate_prompt",
+                new_callable=AsyncMock,
+            ) as mock_candidate:
                 mock_active.return_value = {"id": 1, "traffic": 1.0}
                 mock_candidate.return_value = None
 
@@ -269,8 +289,13 @@ class TestSelectPromptWithCanary:
     @pytest.mark.asyncio
     async def test_select_only_candidate(self, mock_storage):
         """Test returns candidate if no active."""
-        with patch("bindu.dspy.prompt_selector.get_active_prompt", new_callable=AsyncMock) as mock_active:
-            with patch("bindu.dspy.prompt_selector.get_candidate_prompt", new_callable=AsyncMock) as mock_candidate:
+        with patch(
+            "bindu.dspy.prompt_selector.get_active_prompt", new_callable=AsyncMock
+        ) as mock_active:
+            with patch(
+                "bindu.dspy.prompt_selector.get_candidate_prompt",
+                new_callable=AsyncMock,
+            ) as mock_candidate:
                 mock_active.return_value = None
                 mock_candidate.return_value = {"id": 2, "traffic": 1.0}
 
@@ -280,8 +305,13 @@ class TestSelectPromptWithCanary:
     @pytest.mark.asyncio
     async def test_select_weighted_random(self, mock_storage):
         """Test weighted random selection logic."""
-        with patch("bindu.dspy.prompt_selector.get_active_prompt", new_callable=AsyncMock) as mock_active:
-            with patch("bindu.dspy.prompt_selector.get_candidate_prompt", new_callable=AsyncMock) as mock_candidate:
+        with patch(
+            "bindu.dspy.prompt_selector.get_active_prompt", new_callable=AsyncMock
+        ) as mock_active:
+            with patch(
+                "bindu.dspy.prompt_selector.get_candidate_prompt",
+                new_callable=AsyncMock,
+            ) as mock_candidate:
                 with patch("bindu.dspy.prompt_selector.random.random") as mock_random:
                     mock_active.return_value = {"id": 1, "traffic": 0.9}
                     mock_candidate.return_value = {"id": 2, "traffic": 0.1}
@@ -293,8 +323,13 @@ class TestSelectPromptWithCanary:
     @pytest.mark.asyncio
     async def test_select_zero_traffic(self, mock_storage):
         """Test defaults to active if both have 0 traffic."""
-        with patch("bindu.dspy.prompt_selector.get_active_prompt", new_callable=AsyncMock) as mock_active:
-            with patch("bindu.dspy.prompt_selector.get_candidate_prompt", new_callable=AsyncMock) as mock_candidate:
+        with patch(
+            "bindu.dspy.prompt_selector.get_active_prompt", new_callable=AsyncMock
+        ) as mock_active:
+            with patch(
+                "bindu.dspy.prompt_selector.get_candidate_prompt",
+                new_callable=AsyncMock,
+            ) as mock_candidate:
                 mock_active.return_value = {"id": 1, "traffic": 0.0}
                 mock_candidate.return_value = {"id": 2, "traffic": 0.0}
 

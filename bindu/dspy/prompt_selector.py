@@ -25,7 +25,9 @@ from bindu.utils.logging import get_logger
 logger = get_logger("bindu.dspy.prompt_selector")
 
 
-async def select_prompt_with_canary(storage: Storage | None = None, did: str | None = None) -> dict[str, Any] | None:
+async def select_prompt_with_canary(
+    storage: Storage | None = None, did: str | None = None
+) -> dict[str, Any] | None:
     """Select a prompt using weighted random selection based on traffic allocation.
 
     This function implements canary deployment by:
@@ -79,14 +81,12 @@ async def select_prompt_with_canary(storage: Storage | None = None, did: str | N
     total_traffic = active_traffic + candidate_traffic
     if total_traffic == 0:
         # Both have 0 traffic - default to active
-        logger.warning(
-            "Both active and candidate have 0 traffic, defaulting to active"
-        )
+        logger.warning("Both active and candidate have 0 traffic, defaulting to active")
         return active
 
     # Weighted random choice
     choice = random.random()  # Returns float in [0.0, 1.0)
-    
+
     if choice < active_traffic / total_traffic:
         selected = active
         logger.debug(

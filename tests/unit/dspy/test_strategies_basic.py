@@ -7,7 +7,6 @@ import pytest
 
 from bindu.dspy.strategies import (
     STRATEGIES,
-    BaseExtractionStrategy,
     FirstNTurnsStrategy,
     FullHistoryStrategy,
     LastNTurnsStrategy,

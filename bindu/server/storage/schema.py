@@ -219,9 +219,13 @@ agent_prompts_table = Table(
     # Columns
     Column("prompt_text", Text, nullable=False),
     Column("status", prompt_status_enum, nullable=False),
-    Column("traffic", Numeric(precision=5, scale=4), nullable=False, server_default="0"),
+    Column(
+        "traffic", Numeric(precision=5, scale=4), nullable=False, server_default="0"
+    ),
     # Constraints
-    CheckConstraint("traffic >= 0 AND traffic <= 1", name="chk_agent_prompts_traffic_range"),
+    CheckConstraint(
+        "traffic >= 0 AND traffic <= 1", name="chk_agent_prompts_traffic_range"
+    ),
     # Table comment
     comment="Prompts used by agents with constrained active/candidate counts",
 )

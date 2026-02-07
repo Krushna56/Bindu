@@ -125,11 +125,7 @@ def upgrade() -> None:
     # Create agent_prompts table
     # Define enum but don't create it separately - create_table will handle it
     prompt_status_enum = sa.Enum(
-        "active",
-        "candidate",
-        "deprecated",
-        "rolled_back",
-        name="promptstatus"
+        "active", "candidate", "deprecated", "rolled_back", name="promptstatus"
     )
 
     op.create_table(
@@ -139,8 +135,15 @@ def upgrade() -> None:
         ),
         sa.Column("prompt_text", sa.Text(), nullable=False),
         sa.Column("status", prompt_status_enum, nullable=False),
-        sa.Column("traffic", sa.Numeric(precision=5, scale=4), nullable=False, server_default="0"),
-        sa.CheckConstraint("traffic >= 0 AND traffic <= 1", name="chk_agent_prompts_traffic_range"),
+        sa.Column(
+            "traffic",
+            sa.Numeric(precision=5, scale=4),
+            nullable=False,
+            server_default="0",
+        ),
+        sa.CheckConstraint(
+            "traffic >= 0 AND traffic <= 1", name="chk_agent_prompts_traffic_range"
+        ),
         comment="Prompts used by agents with constrained active/candidate counts",
     )
 

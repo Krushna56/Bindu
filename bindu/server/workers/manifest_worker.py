@@ -147,7 +147,9 @@ class ManifestWorker(Worker):
                 # If DSPy is enabled for this manifest, fetch prompts from DB with DID isolation.
                 if getattr(self.manifest, "enable_dspy", False):
                     # Use worker's storage instance (already configured with DID)
-                    selected_prompt = await select_prompt_with_canary(storage=self.storage)
+                    selected_prompt = await select_prompt_with_canary(
+                        storage=self.storage
+                    )
 
                     if selected_prompt:
                         # Use database-selected prompt with canary pooling
@@ -159,8 +161,12 @@ class ManifestWorker(Worker):
                         )
                     else:
                         # No prompts in database - create initial active prompt
-                        system_prompt = app_settings.agent.structured_response_system_prompt
-                        logger.warning("No prompts in database, creating initial active prompt")
+                        system_prompt = (
+                            app_settings.agent.structured_response_system_prompt
+                        )
+                        logger.warning(
+                            "No prompts in database, creating initial active prompt"
+                        )
 
                         # Insert default prompt as active with 100% traffic using worker's storage
                         selected_prompt_id = await insert_prompt(
@@ -169,13 +175,15 @@ class ManifestWorker(Worker):
                             traffic=1.0,
                             storage=self.storage,
                         )
-                        logger.info(f"Created initial active prompt (id={selected_prompt_id}) with 100% traffic")
+                        logger.info(
+                            f"Created initial active prompt (id={selected_prompt_id}) with 100% traffic"
+                        )
 
                     if system_prompt:
                         # Create new list to avoid mutating original message_history
-                        message_history = [{"role": "system", "content": system_prompt}] + (
-                            message_history or []
-                        )
+                        message_history = [
+                            {"role": "system", "content": system_prompt}
+                        ] + (message_history or [])
 
                     # Store prompt_id in task for tracking when using DB prompts
                     if selected_prompt_id is not None:
@@ -186,16 +194,20 @@ class ManifestWorker(Worker):
                         )
                 else:
                     # DSPy disabled for this agent; use manifest-provided system prompt
-                    system_prompt = getattr(self.manifest, "system_prompt", None) or (
-                        (self.manifest.extra_data or {}).get("system_prompt")
-                    ) or app_settings.agent.structured_response_system_prompt
+                    system_prompt = (
+                        getattr(self.manifest, "system_prompt", None)
+                        or ((self.manifest.extra_data or {}).get("system_prompt"))
+                        or app_settings.agent.structured_response_system_prompt
+                    )
 
-                    logger.debug("DSPy disabled for agent; using manifest/system prompt")
+                    logger.debug(
+                        "DSPy disabled for agent; using manifest/system prompt"
+                    )
 
                     if system_prompt:
-                        message_history = [{"role": "system", "content": system_prompt}] + (
-                            message_history or []
-                        )
+                        message_history = [
+                            {"role": "system", "content": system_prompt}
+                        ] + (message_history or [])
 
             # Step 3.1: Execute agent with tracing
             with tracer.start_as_current_span("agent.execute") as agent_span:

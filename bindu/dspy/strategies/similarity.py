@@ -92,7 +92,9 @@ def overlap_similarity(text1: str, text2: str) -> float:
     return len(intersection) / min_size if min_size else 0.0
 
 
-def weighted_similarity(text1: str, text2: str, corpus: list[str] | None = None) -> float:
+def weighted_similarity(
+    text1: str, text2: str, corpus: list[str] | None = None
+) -> float:
     """Calculate TF-IDF style weighted similarity between two texts.
 
     This method gives higher weight to terms that are less common in the corpus.
@@ -189,7 +191,9 @@ def compute_similarity(
     elif method == "weighted":
         return weighted_similarity(text1, text2, corpus)
     else:
-        raise ValueError(f"Unknown similarity method: {method}. Use 'jaccard', 'weighted', or 'overlap'")
+        raise ValueError(
+            f"Unknown similarity method: {method}. Use 'jaccard', 'weighted', or 'overlap'"
+        )
 
 
 # Available similarity methods for documentation

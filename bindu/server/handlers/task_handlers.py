@@ -124,7 +124,7 @@ class TaskHandlers:
 
         if hasattr(self.storage, "store_task_feedback"):
             await self.storage.store_task_feedback(task_id, feedback_data)
-        
+
         # Note: Prompt metrics (num_interactions, average_feedback_score) are now
         # calculated on-demand from the tasks table using the prompt_id foreign key.
         # No need to update metrics continuously - they're computed when needed.

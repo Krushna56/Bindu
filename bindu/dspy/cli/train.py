@@ -50,37 +50,39 @@ def feedback_metric(example, prediction_dict, trace=None):
         Float score between 0.0 and 1.0
     """
     # Validate prediction has output
-    if not prediction_dict or 'output' not in prediction_dict:
+    if not prediction_dict or "output" not in prediction_dict:
         return 0.0
 
-    actual_output = prediction_dict.get('output', '')
+    actual_output = prediction_dict.get("output", "")
     if not actual_output:
         return 0.0
 
     # Use explicit feedback score if available
-    if hasattr(example, 'feedback') and example.feedback:
-        feedback_score = example.feedback.get('score')
+    if hasattr(example, "feedback") and example.feedback:
+        feedback_score = example.feedback.get("score")
         if feedback_score is not None:
             return float(feedback_score)
 
     # Fallback to exact match
-    expected = example.output if hasattr(example, 'output') else ""
+    expected = example.output if hasattr(example, "output") else ""
     return 1.0 if expected.strip() == actual_output.strip() else 0.0
 
 
-def parse_strategy(name: str) -> LastTurnStrategy | FullHistoryStrategy | LastNTurnsStrategy | FirstNTurnsStrategy:
+def parse_strategy(
+    name: str,
+) -> LastTurnStrategy | FullHistoryStrategy | LastNTurnsStrategy | FirstNTurnsStrategy:
     """Parse strategy name string into strategy instance.
-    
+
     Args:
         name: Strategy name. Supported values:
             - "last_turn": Extract only the last conversation turn
             - "full_history": Extract complete conversation history
             - "last_n:N": Extract last N turns (e.g., "last_n:3")
             - "first_n:N": Extract first N turns (e.g., "first_n:3")
-    
+
     Returns:
         Instantiated strategy object based on the name.
-    
+
     Raises:
         ValueError: If strategy name is not recognized.
     """
@@ -99,7 +101,7 @@ def parse_strategy(name: str) -> LastTurnStrategy | FullHistoryStrategy | LastNT
 
 def main() -> None:
     """Run DSPy prompt training from command line.
-    
+
     This function parses command-line arguments and orchestrates the training
     process using the specified optimizer and extraction strategy.
     """

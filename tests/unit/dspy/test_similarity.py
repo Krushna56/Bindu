@@ -63,7 +63,7 @@ class TestJaccardSimilarity:
         text1 = "the quick brown fox"
         text2 = "the lazy brown dog"
         result = jaccard_similarity(text1, text2)
-        
+
         # Intersection: {the, brown} = 2
         # Union: {the, quick, brown, fox, lazy, dog} = 6
         # Jaccard = 2/6 = 0.333...
@@ -158,16 +158,16 @@ class TestWeightedSimilarity:
             "common word again",
             "rare_term appears once",
         ]
-        
+
         # Text with rare term should have higher weight
         text1 = "rare_term here"
         text2 = "common word"
-        
+
         # When comparing against another text with rare_term
         score_rare = weighted_similarity(text1, "rare_term test", corpus=corpus)
         # When comparing common words
         score_common = weighted_similarity(text2, "common test", corpus=corpus)
-        
+
         # Rare terms should get higher weight
         assert score_rare > 0
 
@@ -178,7 +178,7 @@ class TestWeightedSimilarity:
             "the is common",
             "the word here",
         ]
-        
+
         # Common word should have lower weight
         result = weighted_similarity("the", "the the", corpus=corpus)
         assert result > 0  # Still some similarity
@@ -231,9 +231,5 @@ class TestComputeSimilarity:
     def test_compute_passes_corpus(self):
         """Test corpus is passed to weighted method."""
         corpus = ["doc1", "doc2"]
-        result = compute_similarity(
-            "test", "test",
-            method="weighted",
-            corpus=corpus
-        )
+        result = compute_similarity("test", "test", method="weighted", corpus=corpus)
         assert result > 0

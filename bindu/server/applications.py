@@ -424,11 +424,15 @@ class BinduApplication(Starlette):
 
             # Log DSPy status
             if manifest:
-                enable_dspy = getattr(manifest, 'enable_dspy', False)
+                enable_dspy = getattr(manifest, "enable_dspy", False)
                 if enable_dspy:
-                    logger.info("🔧 DSPy Optimization: ✅ ENABLED - System prompts will be loaded from database with canary deployment")
+                    logger.info(
+                        "🔧 DSPy Optimization: ✅ ENABLED - System prompts will be loaded from database with canary deployment"
+                    )
                 else:
-                    logger.info("🔧 DSPy Optimization: ❌ DISABLED - Using static system prompts from agent configuration")
+                    logger.info(
+                        "🔧 DSPy Optimization: ❌ DISABLED - Using static system prompts from agent configuration"
+                    )
 
             # Start TaskManager
             if manifest:

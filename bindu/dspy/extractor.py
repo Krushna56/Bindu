@@ -30,7 +30,7 @@ logger = get_logger("bindu.dspy.extractor")
 
 def clean_messages(history: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Clean messages by removing those with empty content.
-    
+
     Handles both formats:
     - Direct content: {"role": "user", "content": "text"}
     - Parts array: {"role": "user", "parts": [{"kind": "text", "text": "..."}]}
@@ -52,7 +52,7 @@ def clean_messages(history: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
         # Extract content from either direct field or parts array
         content = msg.get("content", "")
-        
+
         # If no direct content, try to extract from parts array
         if not content:
             parts = msg.get("parts", [])
@@ -100,7 +100,9 @@ class InteractionExtractor:
             strategy: Extraction strategy to use. Defaults to LastTurnStrategy.
         """
         self.strategy = strategy or LastTurnStrategy()
-        logger.info(f"Initialized InteractionExtractor with strategy: {self.strategy.name}")
+        logger.info(
+            f"Initialized InteractionExtractor with strategy: {self.strategy.name}"
+        )
 
     def extract(
         self,
@@ -155,7 +157,9 @@ class InteractionExtractor:
             return []
 
         # Delegate to strategy's extract_all
-        return self.strategy.extract_all(task_id, messages, feedback_score, feedback_type)
+        return self.strategy.extract_all(
+            task_id, messages, feedback_score, feedback_type
+        )
 
     def _validate_and_clean(
         self,

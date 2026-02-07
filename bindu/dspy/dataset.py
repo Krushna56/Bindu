@@ -155,7 +155,9 @@ async def fetch_raw_task_data(
         await storage.disconnect()
 
 
-def normalize_feedback(feedback_data: dict[str, Any] | None) -> tuple[float | None, str | None]:
+def normalize_feedback(
+    feedback_data: dict[str, Any] | None,
+) -> tuple[float | None, str | None]:
     """Normalize feedback data to a single numeric score [0.0, 1.0].
 
     Accepts multiple feedback formats:
@@ -240,6 +242,7 @@ def extract_interactions(
         f"using {strategy.name} strategy"
     )
     return interactions
+
 
 def validate_and_clean_interactions(
     interactions: list[Interaction],
@@ -407,17 +410,17 @@ async def build_golden_dataset(
     """
     if min_feedback_threshold is None:
         min_feedback_threshold = app_settings.dspy.min_feedback_threshold
-    
+
     strategy = strategy or LastTurnStrategy()
     logger.info(f"Starting golden dataset pipeline with {strategy.name} strategy")
 
     # Step 0: Fetch raw task data from database
     logger.info("Fetching raw task data from database")
     raw_tasks = await fetch_raw_task_data(limit=limit, did=did)
-    
+
     if not raw_tasks:
         raise ValueError("No tasks found in database")
-    
+
     logger.info(f"Fetched {len(raw_tasks)} raw tasks")
 
     # Step 1: Extract interactions

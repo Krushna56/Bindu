@@ -4,9 +4,9 @@
 
 This document defines the comprehensive testing strategy for the `bindu/dspy` module, which implements offline prompt optimization using DSPy's teleprompter system. The strategy focuses on unit testing all components with proper mocking of external dependencies.
 
-**Created:** January 28, 2026  
-**Target Directory:** `tests/unit/dspy/`  
-**Max Test Files:** 10 files  
+**Created:** January 28, 2026
+**Target Directory:** `tests/unit/dspy/`
+**Max Test Files:** 10 files
 **Testing Framework:** pytest with asyncio support
 
 ---
@@ -28,7 +28,7 @@ Based on the codebase analysis, we follow these established patterns:
 # Pattern 1: Test class organization
 class TestFunctionName:
     """Test function_name behavior."""
-    
+
     def test_specific_behavior(self):
         """Test that specific behavior works correctly."""
         # Test implementation
@@ -105,12 +105,12 @@ def test_multiple_scenarios(input_value, expected):
 We'll chunk related functionality into logical test files:
 
 ### File 1: `test_models.py`
-**Purpose:** Test data models and data classes  
+**Purpose:** Test data models and data classes
 **Components:** `Interaction`, `PromptCandidate`, `RawTaskData`
 
 ### File 2: `test_dataset_pipeline.py`
-**Purpose:** Test dataset preparation pipeline and helper functions  
-**Components:** 
+**Purpose:** Test dataset preparation pipeline and helper functions
+**Components:**
 - `normalize_feedback()`
 - `validate_and_clean_interactions()`
 - `deduplicate_interactions()`
@@ -121,15 +121,15 @@ We'll chunk related functionality into logical test files:
 - `fetch_raw_task_data()`
 - `extract_interactions()`
 
-### File 3: `test_extractor.py` 
-**Purpose:** Test interaction extractor and message cleaning (ALREADY EXISTS - update if needed)  
+### File 3: `test_extractor.py`
+**Purpose:** Test interaction extractor and message cleaning (ALREADY EXISTS - update if needed)
 **Components:**
 - `clean_messages()`
 - `InteractionExtractor` class
 - Strategy integration
 
 ### File 4: `test_strategies_basic.py`
-**Purpose:** Test simple extraction strategies  
+**Purpose:** Test simple extraction strategies
 **Components:**
 - `LastTurnStrategy`
 - `FullHistoryStrategy`
@@ -139,7 +139,7 @@ We'll chunk related functionality into logical test files:
 - `parse_turns()` utility
 
 ### File 5: `test_strategies_advanced.py`
-**Purpose:** Test advanced extraction strategies  
+**Purpose:** Test advanced extraction strategies
 **Components:**
 - `ContextWindowStrategy`
 - `SlidingWindowStrategy`
@@ -147,7 +147,7 @@ We'll chunk related functionality into logical test files:
 - `KeyTurnsStrategy`
 
 ### File 6: `test_similarity.py`
-**Purpose:** Test text similarity algorithms  
+**Purpose:** Test text similarity algorithms
 **Components:**
 - `jaccard_similarity()`
 - `overlap_similarity()`
@@ -156,7 +156,7 @@ We'll chunk related functionality into logical test files:
 - `tokenize()`
 
 ### File 7: `test_training.py`
-**Purpose:** Test training orchestration and core workflow  
+**Purpose:** Test training orchestration and core workflow
 **Components:**
 - `train()` function
 - `train_async()` function
@@ -164,7 +164,7 @@ We'll chunk related functionality into logical test files:
 - A/B test initialization
 
 ### File 8: `test_prompts_and_guard.py`
-**Purpose:** Test prompt management and training guards  
+**Purpose:** Test prompt management and training guards
 **Components:**
 - `get_active_prompt()`
 - `get_candidate_prompt()`
@@ -176,7 +176,7 @@ We'll chunk related functionality into logical test files:
 - `select_prompt_with_canary()`
 
 ### File 9: `test_canary_controller.py`
-**Purpose:** Test canary deployment controller  
+**Purpose:** Test canary deployment controller
 **Components:**
 - `compare_metrics()`
 - `promote_step()`
@@ -186,7 +186,7 @@ We'll chunk related functionality into logical test files:
 - Stabilization detection
 
 ### File 10: `test_dspy_wrappers.py`
-**Purpose:** Test DSPy wrapper components and CLI  
+**Purpose:** Test DSPy wrapper components and CLI
 **Components:**
 - `AgentSignature`
 - `AgentProgram`
@@ -797,7 +797,7 @@ async def test_with_storage(mock_storage):
 def test_optimizer(mock_optimizer):
     from bindu.dspy.program import AgentProgram
     program = AgentProgram("Be helpful")
-    
+
     with patch("dspy.configure"):
         result = optimize(program, [], mock_optimizer)
         mock_optimizer.compile.assert_called_once()
@@ -843,7 +843,7 @@ def test_with_custom_settings():
   - Database connection lifecycle
   - A/B test traffic calculations
   - Feedback normalization logic
-  
+
 ---
 
 ## Test Execution

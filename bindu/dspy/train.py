@@ -13,7 +13,6 @@ This module provides the main training pipeline that coordinates all steps
 of the prompt optimization process, from data collection to candidate generation.
 """
 
-
 from __future__ import annotations
 
 import asyncio
@@ -28,7 +27,6 @@ from bindu.server.storage.postgres_storage import PostgresStorage
 from .dataset import build_golden_dataset, convert_to_dspy_examples
 from .strategies import BaseExtractionStrategy, LastTurnStrategy
 from .guard import ensure_system_stable
-from .models import PromptCandidate
 from .optimizer import optimize
 from .program import AgentProgram
 from .prompts import (
@@ -41,6 +39,7 @@ from .prompts import (
 from dspy.teleprompt import SIMBA, GEPA
 
 logger = get_logger("bindu.dspy.train")
+
 
 async def train_async(
     optimizer: Any,
@@ -104,20 +103,22 @@ async def train_async(
     Note:
         This is an async function. When calling from async code, use await.
         For sync contexts, use the train() wrapper function instead.
-        
+
         DSPy training only initializes experiments. It does NOT:
         - Promote candidates to active
         - Rollback prompts
         - Adjust traffic beyond initial 90/10 split
     """
     strategy = strategy or LastTurnStrategy()
-    logger.info(f"Starting DSPy training pipeline with {strategy.name} strategy (DID: {did or 'public'})")
+    logger.info(
+        f"Starting DSPy training pipeline with {strategy.name} strategy (DID: {did or 'public'})"
+    )
 
     # Create a single storage instance for the entire training pipeline
     # This is more efficient than creating/destroying connections for each operation
     storage = PostgresStorage(did=did)
     await storage.connect()
-    
+
     try:
         # Step 0: Ensure system is stable (no active experiments) with DID isolation
         logger.info("Checking system stability")
@@ -131,9 +132,11 @@ async def train_async(
                 "No active prompt found in database. System requires an active prompt "
                 "before DSPy training can begin."
             )
-        
+
         current_prompt_text = active_prompt["prompt_text"]
-        logger.info(f"Using active prompt (id={active_prompt['id']}) as base for optimization")
+        logger.info(
+            f"Using active prompt (id={active_prompt['id']}) as base for optimization"
+        )
 
         # Step 2: Configure DSPy with default model
         logger.info(f"Configuring DSPy with model: {app_settings.dspy.default_model}")
@@ -170,8 +173,7 @@ async def train_async(
         # These optimizers require an existing prompt to refine.
         if optimizer is None:
             raise ValueError(
-                "v1 requires an explicit prompt-optimizing optimizer "
-                "(SIMBA or GEPA)."
+                "v1 requires an explicit prompt-optimizing optimizer (SIMBA or GEPA)."
             )
 
         if not isinstance(optimizer, (SIMBA, GEPA)):
@@ -187,29 +189,27 @@ async def train_async(
 
         # Step 7: Run prompt optimization
         # The optimizer mutates the program's instructions based on the dataset.
-        logger.info(
-            f"Running prompt optimization using {type(optimizer).__name__}"
-        )
+        logger.info(f"Running prompt optimization using {type(optimizer).__name__}")
         optimized_program = optimize(
             program=program,
             dataset=dspy_examples,
             optimizer=optimizer,
         )
 
-        logger.info(
-            "Extracting optimized instructions from predictor"
-        )
+        logger.info("Extracting optimized instructions from predictor")
         instructions = optimized_program.instructions
-        
+
         if not instructions or not instructions.strip():
             raise RuntimeError("Optimizer did not produce valid instructions")
 
         # Step 9: Initialize A/B test with optimized prompt
         # DSPy training creates the candidate and sets initial traffic split.
         # It does NOT promote, rollback, or adjust traffic beyond this point.
-        
+
         candidate_traffic = app_settings.dspy.initial_candidate_traffic
-        logger.info(f"Inserting optimized prompt as candidate with {candidate_traffic:.0%} traffic")
+        logger.info(
+            f"Inserting optimized prompt as candidate with {candidate_traffic:.0%} traffic"
+        )
         candidate_id = await insert_prompt(
             text=instructions,
             status="candidate",
@@ -218,26 +218,29 @@ async def train_async(
             did=did,
         )
         logger.info(f"Candidate prompt inserted (id={candidate_id})")
-        
+
         # Set active prompt to configured traffic (already fetched in Step 1)
         active_id = active_prompt["id"]
         active_traffic = app_settings.dspy.initial_active_traffic
-        logger.info(f"Setting active prompt (id={active_id}) to {active_traffic:.0%} traffic")
+        logger.info(
+            f"Setting active prompt (id={active_id}) to {active_traffic:.0%} traffic"
+        )
         await update_prompt_traffic(active_id, active_traffic, storage=storage, did=did)
-        
+
         # Zero out traffic for all other prompts
         logger.info("Zeroing out traffic for all other prompts")
         await zero_out_all_except([active_id, candidate_id], storage=storage, did=did)
-        
+
         logger.info(
             f"A/B test initialized: active (id={active_id}) at {active_traffic:.0%}, "
             f"candidate (id={candidate_id}) at {candidate_traffic:.0%}"
         )
-    
+
     finally:
         # Always disconnect storage, even if an error occurred
         await storage.disconnect()
         logger.info("Training pipeline storage connection closed")
+
 
 def train(
     optimizer: Any = None,

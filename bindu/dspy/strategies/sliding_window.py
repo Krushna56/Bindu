@@ -96,7 +96,7 @@ class SlidingWindowStrategy(BaseExtractionStrategy):
             return None
 
         # Take the last window
-        window = turns[-self.window_size:]
+        window = turns[-self.window_size :]
         return self._create_interaction_from_window(
             task_id, window, feedback_score, feedback_type
         )
@@ -127,7 +127,9 @@ class SlidingWindowStrategy(BaseExtractionStrategy):
         interactions: list[Interaction] = []
 
         # Slide the window across turns, starting from start_offset
-        for start_idx in range(effective_start, len(turns) - self.window_size + 1, self.stride):
+        for start_idx in range(
+            effective_start, len(turns) - self.window_size + 1, self.stride
+        ):
             window = turns[start_idx : start_idx + self.window_size]
             interaction = self._create_interaction_from_window(
                 task_id, window, feedback_score, feedback_type
@@ -175,7 +177,9 @@ class SlidingWindowStrategy(BaseExtractionStrategy):
             if len(user_messages) <= 3:
                 user_input = "\n\n".join(user_messages)
             else:
-                formatted = [f"[Turn {i+1}] {msg}" for i, msg in enumerate(user_messages)]
+                formatted = [
+                    f"[Turn {i + 1}] {msg}" for i, msg in enumerate(user_messages)
+                ]
                 user_input = "\n\n".join(formatted)
 
         if not user_input or not agent_output:

@@ -1,6 +1,6 @@
 """Unit tests for DSPy dataset pipeline."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 from uuid import uuid4
 
 import dspy
@@ -18,7 +18,6 @@ from bindu.dspy.dataset import (
     fetch_raw_task_data,
     build_golden_dataset,
 )
-from bindu.dspy.extractor import InteractionExtractor
 from bindu.dspy.models import Interaction
 from bindu.dspy.strategies import LastTurnStrategy
 
@@ -381,10 +380,7 @@ class TestValidateDatasetSize:
 
     def test_validate_size_acceptable(self):
         """Test within range passes."""
-        dataset = [
-            {"input": f"test{i}", "output": f"response{i}"}
-            for i in range(10)
-        ]
+        dataset = [{"input": f"test{i}", "output": f"response{i}"} for i in range(10)]
 
         with patch("bindu.dspy.dataset.app_settings") as mock_settings:
             mock_settings.dspy.min_examples = 2
@@ -395,10 +391,7 @@ class TestValidateDatasetSize:
 
     def test_validate_size_too_large_logs_warning(self):
         """Test above max_examples logs warning but passes."""
-        dataset = [
-            {"input": f"test{i}", "output": f"response{i}"}
-            for i in range(100)
-        ]
+        dataset = [{"input": f"test{i}", "output": f"response{i}"} for i in range(100)]
 
         with patch("bindu.dspy.dataset.app_settings") as mock_settings:
             mock_settings.dspy.min_examples = 2
@@ -516,7 +509,9 @@ class TestFetchRawTaskData:
         """Test DID is passed to storage."""
         mock_storage.fetch_tasks_with_feedback.return_value = []
 
-        with patch("bindu.dspy.dataset.PostgresStorage", return_value=mock_storage) as mock_cls:
+        with patch(
+            "bindu.dspy.dataset.PostgresStorage", return_value=mock_storage
+        ) as mock_cls:
             await fetch_raw_task_data(limit=10, did="did:bindu:test")
             mock_cls.assert_called_once_with(did="did:bindu:test")
 
@@ -542,7 +537,9 @@ class TestFetchRawTaskData:
     @pytest.mark.asyncio
     async def test_fetch_handles_connection_error(self, mock_storage):
         """Test raises ConnectionError on DB failure."""
-        mock_storage.fetch_tasks_with_feedback.side_effect = Exception("Connection failed")
+        mock_storage.fetch_tasks_with_feedback.side_effect = Exception(
+            "Connection failed"
+        )
 
         with patch("bindu.dspy.dataset.PostgresStorage", return_value=mock_storage):
             with pytest.raises(ConnectionError, match="Failed to fetch raw task data"):
@@ -589,7 +586,7 @@ class TestExtractInteractions:
 
         strategy = LastTurnStrategy()
         result = extract_interactions(raw_tasks, strategy=strategy)
-        
+
         assert len(result) >= 0  # May return empty if extraction fails
 
     def test_extract_normalizes_feedback(self):
@@ -659,9 +656,15 @@ class TestBuildGoldenDataset:
         """Test complete pipeline executes successfully."""
         with patch("bindu.dspy.dataset.fetch_raw_task_data") as mock_fetch:
             with patch("bindu.dspy.dataset.extract_interactions") as mock_extract:
-                with patch("bindu.dspy.dataset.validate_and_clean_interactions") as mock_validate:
-                    with patch("bindu.dspy.dataset.deduplicate_interactions") as mock_dedup:
-                        with patch("bindu.dspy.dataset.prepare_golden_dataset") as mock_prepare:
+                with patch(
+                    "bindu.dspy.dataset.validate_and_clean_interactions"
+                ) as mock_validate:
+                    with patch(
+                        "bindu.dspy.dataset.deduplicate_interactions"
+                    ) as mock_dedup:
+                        with patch(
+                            "bindu.dspy.dataset.prepare_golden_dataset"
+                        ) as mock_prepare:
                             with patch("bindu.dspy.dataset.validate_dataset_size"):
                                 # Setup mocks
                                 task_id = uuid4()
@@ -716,7 +719,9 @@ class TestBuildGoldenDataset:
         """Test ValueError after validation."""
         with patch("bindu.dspy.dataset.fetch_raw_task_data") as mock_fetch:
             with patch("bindu.dspy.dataset.extract_interactions") as mock_extract:
-                with patch("bindu.dspy.dataset.validate_and_clean_interactions") as mock_validate:
+                with patch(
+                    "bindu.dspy.dataset.validate_and_clean_interactions"
+                ) as mock_validate:
                     task_id = uuid4()
                     mock_fetch.return_value = [
                         RawTaskData(id=task_id, history=[], created_at="2026-01-28")
@@ -726,7 +731,9 @@ class TestBuildGoldenDataset:
                     ]
                     mock_validate.return_value = []
 
-                    with pytest.raises(ValueError, match="No interactions passed validation"):
+                    with pytest.raises(
+                        ValueError, match="No interactions passed validation"
+                    ):
                         await build_golden_dataset()
 
     @pytest.mark.asyncio
@@ -738,15 +745,23 @@ class TestBuildGoldenDataset:
             with patch("bindu.dspy.dataset.extract_interactions") as mock_extract:
                 with patch("bindu.dspy.dataset.validate_and_clean_interactions"):
                     with patch("bindu.dspy.dataset.deduplicate_interactions"):
-                        with patch("bindu.dspy.dataset.prepare_golden_dataset") as mock_prepare:
+                        with patch(
+                            "bindu.dspy.dataset.prepare_golden_dataset"
+                        ) as mock_prepare:
                             with patch("bindu.dspy.dataset.validate_dataset_size"):
                                 mock_fetch.return_value = [
-                                    RawTaskData(id=uuid4(), history=[], created_at="2026-01-28")
+                                    RawTaskData(
+                                        id=uuid4(), history=[], created_at="2026-01-28"
+                                    )
                                 ]
                                 mock_extract.return_value = [
-                                    Interaction(id=uuid4(), user_input="Q", agent_output="A")
+                                    Interaction(
+                                        id=uuid4(), user_input="Q", agent_output="A"
+                                    )
                                 ]
-                                mock_prepare.return_value = [{"input": "Q", "output": "A"}]
+                                mock_prepare.return_value = [
+                                    {"input": "Q", "output": "A"}
+                                ]
 
                                 await build_golden_dataset(strategy=custom_strategy)
                                 # Verify strategy was passed
@@ -760,13 +775,21 @@ class TestBuildGoldenDataset:
             with patch("bindu.dspy.dataset.extract_interactions"):
                 with patch("bindu.dspy.dataset.validate_and_clean_interactions"):
                     with patch("bindu.dspy.dataset.deduplicate_interactions"):
-                        with patch("bindu.dspy.dataset.prepare_golden_dataset") as mock_prepare:
+                        with patch(
+                            "bindu.dspy.dataset.prepare_golden_dataset"
+                        ) as mock_prepare:
                             with patch("bindu.dspy.dataset.validate_dataset_size"):
                                 mock_fetch.return_value = [
-                                    RawTaskData(id=uuid4(), history=[], created_at="2026-01-28")
+                                    RawTaskData(
+                                        id=uuid4(), history=[], created_at="2026-01-28"
+                                    )
                                 ]
-                                mock_prepare.return_value = [{"input": "Q", "output": "A"}]
+                                mock_prepare.return_value = [
+                                    {"input": "Q", "output": "A"}
+                                ]
 
                                 await build_golden_dataset(did="did:bindu:test")
                                 mock_fetch.assert_called_once()
-                                assert mock_fetch.call_args[1]["did"] == "did:bindu:test"
+                                assert (
+                                    mock_fetch.call_args[1]["did"] == "did:bindu:test"
+                                )

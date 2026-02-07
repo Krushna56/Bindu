@@ -249,7 +249,9 @@ class PostgresStorage(Storage[ContextT]):
             logger.error(
                 f"Database session error: {type(e).__name__}: {e}",
                 exc_info=True,
-                extra={"schema": self.schema_name if hasattr(self, 'schema_name') else None}
+                extra={
+                    "schema": self.schema_name if hasattr(self, "schema_name") else None
+                },
             )
             raise
 
@@ -303,7 +305,7 @@ class PostgresStorage(Storage[ContextT]):
             metadata=row.metadata or {},
         )
         # Add prompt_id if present
-        if hasattr(row, 'prompt_id') and row.prompt_id is not None:
+        if hasattr(row, "prompt_id") and row.prompt_id is not None:
             task["prompt_id"] = row.prompt_id
         return task
 
@@ -1083,6 +1085,7 @@ class PostgresStorage(Storage[ContextT]):
                 return {row.task_id: row.config for row in rows}
 
         return await self._retry_on_connection_error(_load_all)
+
     # -------------------------------------------------------------------------
     # Prompt Management Operations (for DSPy A/B testing)
     # -------------------------------------------------------------------------
@@ -1108,12 +1111,14 @@ class PostgresStorage(Storage[ContextT]):
                 if row:
                     # Calculate metrics on-demand
                     metrics = await self._calculate_prompt_metrics(row.id, session)
-                    
+
                     return {
                         "id": row.id,
                         "prompt_text": row.prompt_text,
                         "status": row.status,
-                        "traffic": float(row.traffic) if row.traffic is not None else 0.0,
+                        "traffic": float(row.traffic)
+                        if row.traffic is not None
+                        else 0.0,
                         "num_interactions": metrics["num_interactions"],
                         "average_feedback_score": metrics["average_feedback_score"],
                     }
@@ -1143,12 +1148,14 @@ class PostgresStorage(Storage[ContextT]):
                 if row:
                     # Calculate metrics on-demand
                     metrics = await self._calculate_prompt_metrics(row.id, session)
-                    
+
                     return {
                         "id": row.id,
                         "prompt_text": row.prompt_text,
                         "status": row.status,
-                        "traffic": float(row.traffic) if row.traffic is not None else 0.0,
+                        "traffic": float(row.traffic)
+                        if row.traffic is not None
+                        else 0.0,
                         "num_interactions": metrics["num_interactions"],
                         "average_feedback_score": metrics["average_feedback_score"],
                     }
@@ -1179,15 +1186,21 @@ class PostgresStorage(Storage[ContextT]):
         async def _insert():
             async with self._get_session_with_schema() as session:
                 async with session.begin():
-                    stmt = agent_prompts_table.insert().values(
-                        prompt_text=text,
-                        status=status,
-                        traffic=traffic,
-                    ).returning(agent_prompts_table.c.id)
+                    stmt = (
+                        agent_prompts_table.insert()
+                        .values(
+                            prompt_text=text,
+                            status=status,
+                            traffic=traffic,
+                        )
+                        .returning(agent_prompts_table.c.id)
+                    )
 
                     result = await session.execute(stmt)
                     prompt_id = result.scalar_one()
-                    logger.info(f"Inserted prompt {prompt_id} with status '{status}' and traffic {traffic}")
+                    logger.info(
+                        f"Inserted prompt {prompt_id} with status '{status}' and traffic {traffic}"
+                    )
                     return prompt_id
 
         return await self._retry_on_connection_error(_insert)
@@ -1283,6 +1296,7 @@ class PostgresStorage(Storage[ContextT]):
                 - num_interactions: Total number of tasks that used this prompt
                 - average_feedback_score: Average normalized feedback score (0-1) or None
         """
+
         # Helper to execute the query
         async def _calc(session):
             # Join tasks with task_feedback to get feedback scores
@@ -1295,27 +1309,30 @@ class PostgresStorage(Storage[ContextT]):
                             func.jsonb_extract_path_text(
                                 task_feedback_table.c.feedback_data, "rating"
                             ),
-                            sa.Numeric
-                        ) / 5.0  # Normalize 1-5 rating to 0-1
-                    ).label("average_feedback_score")
+                            sa.Numeric,
+                        )
+                        / 5.0  # Normalize 1-5 rating to 0-1
+                    ).label("average_feedback_score"),
                 )
                 .select_from(
                     tasks_table.outerjoin(
                         task_feedback_table,
-                        tasks_table.c.id == task_feedback_table.c.task_id
+                        tasks_table.c.id == task_feedback_table.c.task_id,
                     )
                 )
                 .where(tasks_table.c.prompt_id == prompt_id)
             )
-            
+
             result = await session.execute(stmt)
             row = result.fetchone()
-            
+
             return {
                 "num_interactions": row.num_interactions or 0,
-                "average_feedback_score": float(row.average_feedback_score) if row.average_feedback_score is not None else None,
+                "average_feedback_score": float(row.average_feedback_score)
+                if row.average_feedback_score is not None
+                else None,
             }
-        
+
         # Use provided session or create a new one
         if session:
             return await _calc(session)

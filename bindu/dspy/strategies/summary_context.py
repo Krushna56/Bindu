@@ -65,7 +65,9 @@ class SummaryContextStrategy(BaseExtractionStrategy):
         self.summary_turns = max(1, summary_turns)
         self.recent_turns = max(1, recent_turns)
         self.max_summary_length = max(100, max_summary_length)
-        self.summary_format = summary_format if summary_format in ("bullets", "paragraph") else "bullets"
+        self.summary_format = (
+            summary_format if summary_format in ("bullets", "paragraph") else "bullets"
+        )
 
     @property
     def name(self) -> str:
@@ -95,7 +97,9 @@ class SummaryContextStrategy(BaseExtractionStrategy):
 
         # If we have fewer turns than recent_turns, just use all turns without summary
         if len(turns) <= self.recent_turns:
-            return self._create_simple_interaction(task_id, turns, feedback_score, feedback_type)
+            return self._create_simple_interaction(
+                task_id, turns, feedback_score, feedback_type
+            )
 
         # Split turns into summary portion and recent portion
         total_context_turns = self.summary_turns + self.recent_turns
@@ -107,8 +111,8 @@ class SummaryContextStrategy(BaseExtractionStrategy):
         else:
             # Take the relevant window from the end
             relevant_turns = turns[-total_context_turns:]
-            turns_to_summarize = relevant_turns[:self.summary_turns]
-            recent_context = relevant_turns[self.summary_turns:]
+            turns_to_summarize = relevant_turns[: self.summary_turns]
+            recent_context = relevant_turns[self.summary_turns :]
 
         # Create summary of earlier turns
         summary = self._create_summary(turns_to_summarize)
@@ -173,7 +177,7 @@ class SummaryContextStrategy(BaseExtractionStrategy):
 
         # Truncate if too long
         if len(summary) > self.max_summary_length:
-            summary = summary[:self.max_summary_length - 3] + "..."
+            summary = summary[: self.max_summary_length - 3] + "..."
 
         return summary
 
@@ -183,14 +187,16 @@ class SummaryContextStrategy(BaseExtractionStrategy):
 
         for user_msg, assistant_msg in turns:
             user_key = self._extract_key_point(user_msg, prefix="User asked about")
-            assistant_key = self._extract_key_point(assistant_msg, prefix="and received information on")
+            assistant_key = self._extract_key_point(
+                assistant_msg, prefix="and received information on"
+            )
             points.append(f"{user_key} {assistant_key}.")
 
         summary = " ".join(points)
 
         # Truncate if too long
         if len(summary) > self.max_summary_length:
-            summary = summary[:self.max_summary_length - 3] + "..."
+            summary = summary[: self.max_summary_length - 3] + "..."
 
         return summary
 
@@ -216,7 +222,7 @@ class SummaryContextStrategy(BaseExtractionStrategy):
                     sentence_end = pos
 
         if sentence_end != -1 and sentence_end < 100:
-            key_point = text[:sentence_end + 1]
+            key_point = text[: sentence_end + 1]
         else:
             # Truncate to reasonable length
             if len(text) > 80:

@@ -80,13 +80,13 @@ def compare_metrics(
         )
         return "active"
     else:
-        logger.info(
-            f"Scores are tied (both={active_score:.3f}) - treating as tie"
-        )
+        logger.info(f"Scores are tied (both={active_score:.3f}) - treating as tie")
         return None
 
 
-async def promote_step(active: dict, candidate: dict, storage: Storage, did: str | None = None) -> None:
+async def promote_step(
+    active: dict, candidate: dict, storage: Storage, did: str | None = None
+) -> None:
     """Promote candidate by increasing its traffic by 0.1 and decreasing active's.
 
     Args:
@@ -105,14 +105,27 @@ async def promote_step(active: dict, candidate: dict, storage: Storage, did: str
         f"{new_active_traffic:.1f}"
     )
 
-    await update_prompt_traffic(candidate["id"], new_candidate_traffic, storage=storage, did=did)
-    await update_prompt_traffic(active["id"], new_active_traffic, storage=storage, did=did)
+    await update_prompt_traffic(
+        candidate["id"], new_candidate_traffic, storage=storage, did=did
+    )
+    await update_prompt_traffic(
+        active["id"], new_active_traffic, storage=storage, did=did
+    )
 
     # Check for stabilization
-    await _check_stabilization(active, candidate, new_active_traffic, new_candidate_traffic, storage=storage, did=did)
+    await _check_stabilization(
+        active,
+        candidate,
+        new_active_traffic,
+        new_candidate_traffic,
+        storage=storage,
+        did=did,
+    )
 
 
-async def rollback_step(active: dict, candidate: dict, storage: Storage, did: str | None = None) -> None:
+async def rollback_step(
+    active: dict, candidate: dict, storage: Storage, did: str | None = None
+) -> None:
     """Rollback candidate by decreasing its traffic by 0.1 and increasing active's.
 
     Args:
@@ -131,15 +144,31 @@ async def rollback_step(active: dict, candidate: dict, storage: Storage, did: st
         f"{new_active_traffic:.1f}"
     )
 
-    await update_prompt_traffic(candidate["id"], new_candidate_traffic, storage=storage, did=did)
-    await update_prompt_traffic(active["id"], new_active_traffic, storage=storage, did=did)
+    await update_prompt_traffic(
+        candidate["id"], new_candidate_traffic, storage=storage, did=did
+    )
+    await update_prompt_traffic(
+        active["id"], new_active_traffic, storage=storage, did=did
+    )
 
     # Check for stabilization
-    await _check_stabilization(active, candidate, new_active_traffic, new_candidate_traffic, storage=storage, did=did)
+    await _check_stabilization(
+        active,
+        candidate,
+        new_active_traffic,
+        new_candidate_traffic,
+        storage=storage,
+        did=did,
+    )
 
 
 async def _check_stabilization(
-    active: dict, candidate: dict, active_traffic: float, candidate_traffic: float, storage: Storage, did: str | None = None
+    active: dict,
+    candidate: dict,
+    active_traffic: float,
+    candidate_traffic: float,
+    storage: Storage,
+    did: str | None = None,
 ) -> None:
     """Check if the system has stabilized and update statuses accordingly.
 
@@ -158,7 +187,9 @@ async def _check_stabilization(
             f"System stabilized: active won, setting candidate {candidate['id']} "
             f"to rolled_back"
         )
-        await update_prompt_status(candidate["id"], "rolled_back", storage=storage, did=did)
+        await update_prompt_status(
+            candidate["id"], "rolled_back", storage=storage, did=did
+        )
 
     elif candidate_traffic == 1.0 and active_traffic == 0.0:
         # Candidate won, promote to active and deprecate old active
@@ -175,17 +206,17 @@ async def run_canary_controller(did: str | None = None) -> None:
 
     Compares active and candidate prompts and adjusts traffic based on metrics.
     If no candidate exists, the system is considered stable.
-    
+
     Args:
         did: Decentralized Identifier for schema isolation (required for multi-tenancy)
     """
     logger.info(f"Starting canary controller (DID: {did or 'public'})")
-    
+
     # Create a single storage instance for the entire canary controller run
     # This is more efficient than creating/destroying connections for each operation
     storage = PostgresStorage(did=did)
     await storage.connect()
-    
+
     try:
         active = await get_active_prompt(storage=storage, did=did)
         candidate = await get_candidate_prompt(storage=storage, did=did)
@@ -207,7 +238,7 @@ async def run_canary_controller(did: str | None = None) -> None:
             await rollback_step(active, candidate, storage=storage, did=did)
         else:
             logger.info("No clear winner - maintaining current traffic distribution")
-    
+
     finally:
         # Always disconnect storage, even if an error occurred
         await storage.disconnect()

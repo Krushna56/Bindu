@@ -3,7 +3,6 @@
 from unittest.mock import patch
 from uuid import uuid4
 
-import pytest
 
 from bindu.dspy.strategies import (
     ContextWindowStrategy,
@@ -28,10 +27,7 @@ class TestContextWindowStrategy:
             {"role": "assistant", "content": "Answer"},
         ]
 
-        strategy = ContextWindowStrategy(
-            n_turns=1,
-            system_prompt="You are helpful."
-        )
+        strategy = ContextWindowStrategy(n_turns=1, system_prompt="You are helpful.")
         result = strategy.extract(uuid4(), messages)
 
         assert result is not None
@@ -84,10 +80,12 @@ class TestContextWindowStrategy:
         """Test >3 turns are numbered."""
         messages = []
         for i in range(5):
-            messages.extend([
-                {"role": "user", "content": f"Q{i}"},
-                {"role": "assistant", "content": f"A{i}"},
-            ])
+            messages.extend(
+                [
+                    {"role": "user", "content": f"Q{i}"},
+                    {"role": "assistant", "content": f"A{i}"},
+                ]
+            )
 
         strategy = ContextWindowStrategy(n_turns=5)
         result = strategy.extract(uuid4(), messages)
@@ -123,7 +121,9 @@ class TestContextWindowStrategy:
 
     def test_extract_default_n_turns(self):
         """Test uses settings default."""
-        with patch("bindu.dspy.strategies.context_window.app_settings") as mock_settings:
+        with patch(
+            "bindu.dspy.strategies.context_window.app_settings"
+        ) as mock_settings:
             mock_settings.dspy.default_n_turns = 3
             strategy = ContextWindowStrategy(n_turns=None)
 
@@ -245,10 +245,12 @@ class TestSlidingWindowStrategy:
         """Test multiple Interactions are created."""
         messages = []
         for i in range(5):
-            messages.extend([
-                {"role": "user", "content": f"Q{i}"},
-                {"role": "assistant", "content": f"A{i}"},
-            ])
+            messages.extend(
+                [
+                    {"role": "user", "content": f"Q{i}"},
+                    {"role": "assistant", "content": f"A{i}"},
+                ]
+            )
 
         strategy = SlidingWindowStrategy(window_size=2, stride=1)
         results = strategy.extract_all(uuid4(), messages)
@@ -273,7 +275,9 @@ class TestSlidingWindowStrategy:
 
     def test_extract_default_params(self):
         """Test uses settings defaults."""
-        with patch("bindu.dspy.strategies.sliding_window.app_settings") as mock_settings:
+        with patch(
+            "bindu.dspy.strategies.sliding_window.app_settings"
+        ) as mock_settings:
             mock_settings.dspy.default_window_size = 2
             mock_settings.dspy.default_stride = 1
 
@@ -323,10 +327,12 @@ class TestSummaryContextStrategy:
         """Test long history is summarized."""
         messages = []
         for i in range(10):
-            messages.extend([
-                {"role": "user", "content": f"Q{i}"},
-                {"role": "assistant", "content": f"A{i}"},
-            ])
+            messages.extend(
+                [
+                    {"role": "user", "content": f"Q{i}"},
+                    {"role": "assistant", "content": f"A{i}"},
+                ]
+            )
 
         strategy = SummaryContextStrategy(summary_turns=5, recent_turns=3)
         result = strategy.extract(uuid4(), messages)
@@ -342,10 +348,12 @@ class TestSummaryContextStrategy:
             {"role": "assistant", "content": "Initial answer"},
         ]
         for i in range(10):
-            messages.extend([
-                {"role": "user", "content": f"Q{i}"},
-                {"role": "assistant", "content": f"A{i}"},
-            ])
+            messages.extend(
+                [
+                    {"role": "user", "content": f"Q{i}"},
+                    {"role": "assistant", "content": f"A{i}"},
+                ]
+            )
 
         strategy = SummaryContextStrategy(summary_turns=5, recent_turns=3)
         result = strategy.extract(uuid4(), messages)
@@ -357,25 +365,33 @@ class TestSummaryContextStrategy:
         """Test last N turns are preserved."""
         messages = []
         for i in range(10):
-            messages.extend([
-                {"role": "user", "content": f"Q{i}"},
-                {"role": "assistant", "content": f"A{i}"},
-            ])
+            messages.extend(
+                [
+                    {"role": "user", "content": f"Q{i}"},
+                    {"role": "assistant", "content": f"A{i}"},
+                ]
+            )
 
         strategy = SummaryContextStrategy(summary_turns=5, recent_turns=3)
         result = strategy.extract(uuid4(), messages)
 
         # Should have recent user messages from recent_turns
-        assert "Q7" in result.user_input or "Q8" in result.user_input or "Q9" in result.user_input
+        assert (
+            "Q7" in result.user_input
+            or "Q8" in result.user_input
+            or "Q9" in result.user_input
+        )
 
     def test_extract_formats_summary_section(self):
         """Test summary section is clearly marked."""
         messages = []
         for i in range(10):
-            messages.extend([
-                {"role": "user", "content": f"Q{i}"},
-                {"role": "assistant", "content": f"A{i}"},
-            ])
+            messages.extend(
+                [
+                    {"role": "user", "content": f"Q{i}"},
+                    {"role": "assistant", "content": f"A{i}"},
+                ]
+            )
 
         strategy = SummaryContextStrategy(summary_turns=5, recent_turns=2)
         result = strategy.extract(uuid4(), messages)
@@ -401,10 +417,12 @@ class TestSummaryContextStrategy:
         strategy = SummaryContextStrategy(summary_turns=5, recent_turns=3)
         messages = []
         for i in range(3):
-            messages.extend([
-                {"role": "user", "content": f"Q{i}"},
-                {"role": "assistant", "content": f"A{i}"},
-            ])
+            messages.extend(
+                [
+                    {"role": "user", "content": f"Q{i}"},
+                    {"role": "assistant", "content": f"A{i}"},
+                ]
+            )
 
         result = strategy.extract(uuid4(), messages)
         assert result is not None
@@ -513,10 +531,12 @@ class TestKeyTurnsStrategy:
         """Test selected turns are formatted."""
         messages = []
         for i in range(5):
-            messages.extend([
-                {"role": "user", "content": f"Q{i}"},
-                {"role": "assistant", "content": f"A{i}"},
-            ])
+            messages.extend(
+                [
+                    {"role": "user", "content": f"Q{i}"},
+                    {"role": "assistant", "content": f"A{i}"},
+                ]
+            )
 
         strategy = KeyTurnsStrategy(n_turns=3)
         result = strategy.extract(uuid4(), messages)
