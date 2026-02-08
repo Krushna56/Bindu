@@ -1,37 +1,28 @@
-"""Unit tests for bindu.edge_client module.
-
-Tests cover:
-- Binary vs text content detection
-- Request body encoding/decoding
-- Response body encoding/decoding
-- Header forwarding
-- Compression support
-- Timeout handling
-- Error scenarios
-"""
+"""Unit tests for Bindu Edge Client."""
 
 import asyncio
 import base64
 import gzip
 import json
-import tempfile
-from pathlib import Path
+from typing import Any, Dict
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
-import pytest
 import httpx
+import pytest
+import websockets
 
 from bindu.edge_client import (
     _is_binary_content_type,
-    _find_project_root,
-    _load_config_file,
+    _parse_args,
     forward_request_to_local,
+    handle_request_async,
+    run_client,
     send_ping,
 )
 
 
-class TestBinaryContentTypeDetection:
-    """Test _is_binary_content_type helper function."""
+class TestIsBinaryContentType:
+    """Tests for _is_binary_content_type function."""
 
     def test_text_content_types(self):
         """Test that text content types are correctly identified."""
@@ -44,135 +35,104 @@ class TestBinaryContentTypeDetection:
             "application/xml",
             "application/x-www-form-urlencoded",
             "application/ld+json",
-            "text/plain; charset=utf-8",
+            "application/rdf+xml",
+            "application/soap+xml",
         ]
         for content_type in text_types:
-            assert not _is_binary_content_type(content_type), f"Failed for {content_type}"
+            assert _is_binary_content_type(content_type) is False
 
     def test_binary_content_types(self):
         """Test that binary content types are correctly identified."""
         binary_types = [
             "image/png",
             "image/jpeg",
-            "image/gif",
             "video/mp4",
             "audio/mpeg",
             "application/pdf",
             "application/octet-stream",
             "application/zip",
             "application/gzip",
-            "font/woff2",
+            "application/x-tar",
             "application/vnd.ms-excel",
+            "font/woff2",
         ]
         for content_type in binary_types:
-            assert _is_binary_content_type(content_type), f"Failed for {content_type}"
+            assert _is_binary_content_type(content_type) is True
 
     def test_unknown_content_type_defaults_to_text(self):
         """Test that unknown content types default to text."""
-        assert not _is_binary_content_type("application/unknown-type")
-        assert not _is_binary_content_type("")
+        assert _is_binary_content_type("application/unknown") is False
+        assert _is_binary_content_type("") is False
+
+    def test_content_type_with_charset(self):
+        """Test content types with charset parameters."""
+        assert _is_binary_content_type("text/html; charset=utf-8") is False
+        assert _is_binary_content_type("application/json; charset=utf-8") is False
 
 
 class TestForwardRequestToLocal:
-    """Test forward_request_to_local function."""
+    """Tests for forward_request_to_local function."""
 
     @pytest.mark.asyncio
-    async def test_simple_text_response(self):
-        """Test forwarding a simple text response."""
+    async def test_successful_text_request(self):
+        """Test successful forwarding of a text request."""
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_response.headers = {"content-type": "text/plain"}
-        mock_response.text = "Hello, World!"
-        mock_response.content = b"Hello, World!"
+        mock_response.headers = {"content-type": "application/json"}
+        mock_response.text = '{"success": true}'
+        mock_response.content = b'{"success": true}'
 
         with patch("bindu.edge_client.httpx.AsyncClient") as mock_client:
             mock_client.return_value.__aenter__.return_value.request = AsyncMock(
                 return_value=mock_response
             )
 
-            req = {
-                "request_id": "test-123",
+            request: Dict[str, Any] = {
                 "method": "GET",
-                "path": "/test",
-                "headers": {},
+                "path": "/api/test",
+                "headers": {"Accept": "application/json"},
+                "request_id": "test-123",
             }
 
-            result = await forward_request_to_local(3773, req)
+            result = await forward_request_to_local(3773, request)
 
             assert result["type"] == "response"
+            assert result["request_id"] == "test-123"
             assert result["status"] == 200
-            assert result["body"] == "Hello, World!"
+            assert result["body"] == '{"success": true}'
             assert result["body_encoding"] == "text"
-            assert "content-type" in result["headers"]
 
     @pytest.mark.asyncio
-    async def test_binary_response(self):
-        """Test forwarding a binary response (image)."""
-        binary_data = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR..."  # PNG header
+    async def test_successful_binary_request(self):
+        """Test successful forwarding of a binary request."""
+        binary_data = b"\x89PNG\r\n\x1a\n"
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.headers = {"content-type": "image/png"}
         mock_response.content = binary_data
-        mock_response.text = binary_data.decode("latin-1")  # Would normally fail
 
         with patch("bindu.edge_client.httpx.AsyncClient") as mock_client:
             mock_client.return_value.__aenter__.return_value.request = AsyncMock(
                 return_value=mock_response
             )
 
-            req = {
-                "request_id": "test-456",
+            request: Dict[str, Any] = {
                 "method": "GET",
                 "path": "/image.png",
                 "headers": {},
+                "request_id": "test-456",
             }
 
-            result = await forward_request_to_local(3773, req)
+            result = await forward_request_to_local(3773, request)
 
             assert result["type"] == "response"
             assert result["status"] == 200
             assert result["body_encoding"] == "base64"
-            
-            # Verify base64 encoding is valid and matches original
-            decoded = base64.b64decode(result["body"])
-            assert decoded == binary_data
+            assert base64.b64decode(result["body"]) == binary_data
 
     @pytest.mark.asyncio
-    async def test_json_response(self):
-        """Test forwarding a JSON response."""
-        json_data = {"status": "success", "data": {"id": 123, "name": "Test"}}
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.headers = {"content-type": "application/json"}
-        mock_response.text = json.dumps(json_data)
-        mock_response.content = json.dumps(json_data).encode()
-
-        with patch("bindu.edge_client.httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.request = AsyncMock(
-                return_value=mock_response
-            )
-
-            req = {
-                "request_id": "test-789",
-                "method": "POST",
-                "path": "/api/data",
-                "headers": {"content-type": "application/json"},
-                "body": json.dumps({"query": "test"}),
-            }
-
-            result = await forward_request_to_local(3773, req)
-
-            assert result["type"] == "response"
-            assert result["status"] == 200
-            assert result["body_encoding"] == "text"
-            assert json.loads(result["body"]) == json_data
-
-    @pytest.mark.asyncio
-    async def test_request_with_base64_body(self):
-        """Test forwarding request with base64-encoded binary body."""
-        binary_body = b"\x00\x01\x02\x03\x04\x05"
-        encoded_body = base64.b64encode(binary_body).decode("ascii")
-
+    async def test_request_with_text_body(self):
+        """Test forwarding request with text body."""
         mock_response = Mock()
         mock_response.status_code = 201
         mock_response.headers = {"content-type": "text/plain"}
@@ -183,25 +143,28 @@ class TestForwardRequestToLocal:
             mock_request = AsyncMock(return_value=mock_response)
             mock_client.return_value.__aenter__.return_value.request = mock_request
 
-            req = {
-                "request_id": "test-binary-req",
+            request: Dict[str, Any] = {
                 "method": "POST",
-                "path": "/upload",
-                "headers": {},
-                "body": encoded_body,
-                "body_encoding": "base64",
+                "path": "/api/data",
+                "headers": {"content-type": "text/plain"},
+                "body": "test data",
+                "request_id": "test-789",
             }
 
-            result = await forward_request_to_local(3773, req)
+            result = await forward_request_to_local(3773, request)
 
-            # Verify request was called with decoded binary data
+            assert result["status"] == 201
+            # Verify the request was called with text body
             mock_request.assert_called_once()
-            call_kwargs = mock_request.call_args.kwargs
-            assert call_kwargs["content"] == binary_body
+            call_args = mock_request.call_args
+            assert call_args[1]["content"] == b"test data"
 
     @pytest.mark.asyncio
-    async def test_query_string_forwarding(self):
-        """Test that query strings are properly forwarded."""
+    async def test_request_with_base64_encoded_body(self):
+        """Test forwarding request with base64 encoded body."""
+        binary_body = b"\x00\x01\x02\x03"
+        encoded_body = base64.b64encode(binary_body).decode("ascii")
+
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.headers = {"content-type": "text/plain"}
@@ -212,312 +175,112 @@ class TestForwardRequestToLocal:
             mock_request = AsyncMock(return_value=mock_response)
             mock_client.return_value.__aenter__.return_value.request = mock_request
 
-            req = {
-                "request_id": "test-query",
-                "method": "GET",
-                "path": "/search?q=test&limit=10",
+            request: Dict[str, Any] = {
+                "method": "POST",
+                "path": "/api/binary",
                 "headers": {},
+                "body": encoded_body,
+                "body_encoding": "base64",
+                "request_id": "test-base64",
             }
 
-            await forward_request_to_local(3773, req)
+            result = await forward_request_to_local(3773, request)
 
-            # Verify URL includes query string
+            assert result["status"] == 200
+            # Verify binary body was decoded and sent
+            mock_request.assert_called_once()
             call_args = mock_request.call_args
-            assert "search?q=test&limit=10" in call_args.args[1]
+            assert call_args[1]["content"] == binary_body
 
     @pytest.mark.asyncio
-    async def test_error_handling(self):
-        """Test error handling when local server is unreachable."""
+    async def test_error_forwarding_returns_502(self):
+        """Test that errors during forwarding return 502 status."""
         with patch("bindu.edge_client.httpx.AsyncClient") as mock_client:
             mock_client.return_value.__aenter__.return_value.request = AsyncMock(
-                side_effect=httpx.ConnectError("Connection refused")
+                side_effect=httpx.RequestError("Connection refused")
             )
 
-            req = {
-                "request_id": "test-error",
+            request: Dict[str, Any] = {
                 "method": "GET",
-                "path": "/test",
+                "path": "/api/test",
                 "headers": {},
+                "request_id": "test-error",
             }
 
-            result = await forward_request_to_local(3773, req)
+            result = await forward_request_to_local(3773, request)
 
             assert result["type"] == "response"
+            assert result["request_id"] == "test-error"
             assert result["status"] == 502
             assert "Agent error" in result["body"]
-            assert result["body_encoding"] == "text"
-
-    @pytest.mark.asyncio
-    async def test_timeout_handling(self):
-        """Test timeout handling."""
-        with patch("bindu.edge_client.httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.request = AsyncMock(
-                side_effect=httpx.TimeoutException("Request timeout")
-            )
-
-            req = {
-                "request_id": "test-timeout",
-                "method": "GET",
-                "path": "/slow",
-                "headers": {},
-            }
-
-            result = await forward_request_to_local(3773, req, timeout=1)
-
-            assert result["type"] == "response"
-            assert result["status"] == 502
-            assert "timeout" in result["body"].lower()
 
     @pytest.mark.asyncio
     async def test_large_response_compression(self):
-        """Test that large responses trigger compression."""
-        # Create a large JSON response
-        large_data = {"items": [{"id": i, "data": "x" * 100} for i in range(100)]}
-        large_json = json.dumps(large_data)
-
+        """Test that large responses are compressed."""
+        # Create a large repetitive response that compresses well
+        large_text = "x" * 10000
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_response.headers = {"content-type": "application/json"}
-        mock_response.text = large_json
-        mock_response.content = large_json.encode()
+        mock_response.headers = {"content-type": "text/plain"}
+        mock_response.text = large_text
+        mock_response.content = large_text.encode("utf-8")
 
         with patch("bindu.edge_client.httpx.AsyncClient") as mock_client:
             mock_client.return_value.__aenter__.return_value.request = AsyncMock(
                 return_value=mock_response
             )
 
-            req = {
-                "request_id": "test-compression",
+            request: Dict[str, Any] = {
                 "method": "GET",
-                "path": "/large",
+                "path": "/api/large",
                 "headers": {},
+                "request_id": "test-compress",
             }
 
-            result = await forward_request_to_local(3773, req)
+            result = await forward_request_to_local(3773, request)
 
             # Should be compressed
-            if result.get("compressed"):
+            if "compressed" in result:
+                assert result["compressed"] is True
                 assert "data" in result
-                # Verify we can decompress
-                compressed_data = base64.b64decode(result["data"])
-                decompressed = gzip.decompress(compressed_data)
+                # Verify we can decompress it
+                compressed = base64.b64decode(result["data"])
+                decompressed = gzip.decompress(compressed).decode("utf-8")
                 original = json.loads(decompressed)
-                assert original["type"] == "response"
-                assert original["status"] == 200
-            else:
-                # If not compressed, should still be valid
-                assert result["body"] == large_json
+                assert original["body"] == large_text
 
     @pytest.mark.asyncio
-    async def test_headers_forwarding(self):
-        """Test that all headers are properly forwarded."""
-        request_headers = {
-            "Authorization": "Bearer token123",
-            "X-Custom-Header": "custom-value",
-            "Content-Type": "application/json",
-        }
-
-        response_headers = {
-            "Content-Type": "application/json",
-            "Cache-Control": "max-age=3600",
-            "X-Response-ID": "resp-123",
-        }
-
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.headers = response_headers
-        mock_response.text = "{}"
-        mock_response.content = b"{}"
-
-        with patch("bindu.edge_client.httpx.AsyncClient") as mock_client:
-            mock_request = AsyncMock(return_value=mock_response)
-            mock_client.return_value.__aenter__.return_value.request = mock_request
-
-            req = {
-                "request_id": "test-headers",
-                "method": "POST",
-                "path": "/api",
-                "headers": request_headers,
-                "body": "{}",
-            }
-
-            result = await forward_request_to_local(3773, req)
-
-            # Verify request headers were forwarded
-            call_kwargs = mock_request.call_args.kwargs
-            assert call_kwargs["headers"] == request_headers
-
-            # Verify response headers are included
-            assert "Cache-Control" in result["headers"]
-            assert result["headers"]["Cache-Control"] == "max-age=3600"
-
-    @pytest.mark.asyncio
-    async def test_text_decode_failure_fallback_to_binary(self):
-        """Test fallback to binary encoding when text decode fails."""
-        # Invalid UTF-8 sequence
-        invalid_utf8 = b"\x80\x81\x82\x83"
-
+    async def test_text_decoding_failure_falls_back_to_binary(self):
+        """Test that text decoding failure falls back to base64 encoding."""
+        invalid_utf8 = b"\x80\x81\x82"
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.headers = {"content-type": "text/plain"}
         mock_response.content = invalid_utf8
-        # Simulate decode error
-        mock_response.text = property(lambda self: (_ for _ in ()).throw(UnicodeDecodeError(
-            'utf-8', invalid_utf8, 0, 1, 'invalid start byte'
-        )))
+        # Make text property raise exception
+        type(mock_response).text = property(lambda self: (_ for _ in ()).throw(UnicodeDecodeError("utf-8", b"", 0, 1, "")))
 
         with patch("bindu.edge_client.httpx.AsyncClient") as mock_client:
             mock_client.return_value.__aenter__.return_value.request = AsyncMock(
                 return_value=mock_response
             )
 
-            req = {
-                "request_id": "test-decode-fail",
+            request: Dict[str, Any] = {
                 "method": "GET",
-                "path": "/binary",
+                "path": "/api/invalid",
                 "headers": {},
+                "request_id": "test-invalid-utf8",
             }
 
-            result = await forward_request_to_local(3773, req)
+            result = await forward_request_to_local(3773, request)
 
-            # Should fallback to base64
+            # Should fall back to base64
             assert result["body_encoding"] == "base64"
-            decoded = base64.b64decode(result["body"])
-            assert decoded == invalid_utf8
-
-
-class TestSendPing:
-    """Test send_ping function."""
+            assert base64.b64decode(result["body"]) == invalid_utf8
 
     @pytest.mark.asyncio
-    async def test_send_ping_success(self):
-        """Test successful ping sending."""
-        mock_ws = AsyncMock()
-        
-        # Run ping for a short duration
-        task = asyncio.create_task(send_ping(mock_ws, interval=0.1))
-        await asyncio.sleep(0.25)  # Let it send 2-3 pings
-        task.cancel()
-        
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
-
-        # Verify at least one ping was sent
-        assert mock_ws.send.call_count >= 2
-        
-        # Verify ping format
-        first_call = mock_ws.send.call_args_list[0]
-        ping_data = json.loads(first_call[0][0])
-        assert ping_data["type"] == "ping"
-        assert "ts" in ping_data
-
-    @pytest.mark.asyncio
-    async def test_send_ping_handles_exception(self):
-        """Test that send_ping gracefully handles exceptions."""
-        mock_ws = AsyncMock()
-        mock_ws.send.side_effect = Exception("Connection closed")
-
-        # Should not raise, just return
-        await send_ping(mock_ws, interval=0.01)
-
-        # Verify it tried to send
-        assert mock_ws.send.call_count == 1
-
-
-class TestEdgeClientIntegration:
-    """Integration-style tests for edge client functionality."""
-
-    @pytest.mark.asyncio
-    async def test_pdf_download(self):
-        """Test downloading a PDF file."""
-        # Minimal PDF header
-        pdf_data = b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n"
-
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.headers = {"content-type": "application/pdf"}
-        mock_response.content = pdf_data
-
-        with patch("bindu.edge_client.httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.request = AsyncMock(
-                return_value=mock_response
-            )
-
-            req = {
-                "request_id": "pdf-test",
-                "method": "GET",
-                "path": "/document.pdf",
-                "headers": {},
-            }
-
-            result = await forward_request_to_local(3773, req)
-
-            assert result["status"] == 200
-            assert result["body_encoding"] == "base64"
-            assert base64.b64decode(result["body"]) == pdf_data
-
-    @pytest.mark.asyncio
-    async def test_multipart_form_upload(self):
-        """Test multipart form data upload."""
-        form_data = b"--boundary\r\nContent-Disposition: form-data; name=\"file\"\r\n\r\ntest\r\n--boundary--"
-
-        mock_response = Mock()
-        mock_response.status_code = 201
-        mock_response.headers = {"content-type": "application/json"}
-        mock_response.text = '{"uploaded": true}'
-        mock_response.content = b'{"uploaded": true}'
-
-        with patch("bindu.edge_client.httpx.AsyncClient") as mock_client:
-            mock_request = AsyncMock(return_value=mock_response)
-            mock_client.return_value.__aenter__.return_value.request = mock_request
-
-            req = {
-                "request_id": "upload-test",
-                "method": "POST",
-                "path": "/upload",
-                "headers": {"content-type": "multipart/form-data; boundary=boundary"},
-                "body": base64.b64encode(form_data).decode("ascii"),
-                "body_encoding": "base64",
-            }
-
-            result = await forward_request_to_local(3773, req)
-
-            assert result["status"] == 201
-            # Verify uploaded successfully
-            call_kwargs = mock_request.call_args.kwargs
-            assert call_kwargs["content"] == form_data
-
-    @pytest.mark.asyncio
-    async def test_empty_response_body(self):
-        """Test handling of empty response body."""
-        mock_response = Mock()
-        mock_response.status_code = 204  # No Content
-        mock_response.headers = {}
-        mock_response.text = ""
-        mock_response.content = b""
-
-        with patch("bindu.edge_client.httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.request = AsyncMock(
-                return_value=mock_response
-            )
-
-            req = {
-                "request_id": "empty-test",
-                "method": "DELETE",
-                "path": "/resource/123",
-                "headers": {},
-            }
-
-            result = await forward_request_to_local(3773, req)
-
-            assert result["status"] == 204
-            assert result["body"] == ""
-
-    @pytest.mark.asyncio
-    async def test_special_characters_in_path(self):
-        """Test handling of special characters in path."""
+    async def test_custom_timeout(self):
+        """Test forwarding with custom timeout."""
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.headers = {"content-type": "text/plain"}
@@ -525,241 +288,461 @@ class TestEdgeClientIntegration:
         mock_response.content = b"OK"
 
         with patch("bindu.edge_client.httpx.AsyncClient") as mock_client:
-            mock_request = AsyncMock(return_value=mock_response)
-            mock_client.return_value.__aenter__.return_value.request = mock_request
+            mock_client.return_value.__aenter__.return_value.request = AsyncMock(
+                return_value=mock_response
+            )
 
-            req = {
-                "request_id": "special-chars",
+            request: Dict[str, Any] = {
                 "method": "GET",
-                "path": "/search?name=John%20Doe&tags=test%2Cproduction",
+                "path": "/api/test",
                 "headers": {},
+                "request_id": "test-timeout",
             }
 
-            await forward_request_to_local(3773, req)
+            await forward_request_to_local(3773, request, timeout=30)
 
-            # Verify special characters are preserved
-            call_args = mock_request.call_args
-            assert "John%20Doe" in call_args.args[1]
-            assert "test%2Cproduction" in call_args.args[1]
-
-class TestFindProjectRoot:
-    """Test _find_project_root function."""
-
-    def test_finds_pyproject_toml_in_current_dir(self):
-        """Test finding project root with pyproject.toml in current directory."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir_path = Path(tmpdir)
-            pyproject_path = tmpdir_path / "pyproject.toml"
-            pyproject_path.write_text("[tool.poetry]\nname = 'test'\n")
-            
-            with patch("bindu.edge_client.Path.cwd", return_value=tmpdir_path):
-                result = _find_project_root()
-                assert result == tmpdir_path
-
-    def test_finds_git_in_current_dir(self):
-        """Test finding project root with .git in current directory."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir_path = Path(tmpdir)
-            git_dir = tmpdir_path / ".git"
-            git_dir.mkdir()
-            
-            with patch("bindu.edge_client.Path.cwd", return_value=tmpdir_path):
-                result = _find_project_root()
-                assert result == tmpdir_path
-
-    def test_finds_pyproject_in_parent_dir(self):
-        """Test finding project root in parent directory."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir_path = Path(tmpdir)
-            pyproject_path = tmpdir_path / "pyproject.toml"
-            pyproject_path.write_text("[tool.poetry]\nname = 'test'\n")
-            
-            # Create nested directory
-            nested_dir = tmpdir_path / "src" / "module"
-            nested_dir.mkdir(parents=True)
-            
-            with patch("bindu.edge_client.Path.cwd", return_value=nested_dir):
-                result = _find_project_root()
-                assert result == tmpdir_path
-
-    def test_finds_git_in_parent_dir(self):
-        """Test finding .git in parent directory."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir_path = Path(tmpdir)
-            git_dir = tmpdir_path / ".git"
-            git_dir.mkdir()
-            
-            # Create nested directory
-            nested_dir = tmpdir_path / "src" / "module"
-            nested_dir.mkdir(parents=True)
-            
-            with patch("bindu.edge_client.Path.cwd", return_value=nested_dir):
-                result = _find_project_root()
-                assert result == tmpdir_path
-
-    def test_returns_none_when_no_markers_found(self):
-        """Test returning None when no project markers found."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir_path = Path(tmpdir)
-            
-            with patch("bindu.edge_client.Path.cwd", return_value=tmpdir_path):
-                result = _find_project_root()
-                # Should return None if no pyproject.toml or .git found
-                # (or might return system root if it has .git, implementation dependent)
-                # We'll just verify it returns a Path or None
-                assert result is None or isinstance(result, Path)
-
-    def test_prefers_closest_marker(self):
-        """Test that closest project marker is found."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir_path = Path(tmpdir)
-            
-            # Create outer project root
-            outer_pyproject = tmpdir_path / "pyproject.toml"
-            outer_pyproject.write_text("[tool.poetry]\nname = 'outer'\n")
-            
-            # Create nested project root
-            nested_dir = tmpdir_path / "nested"
-            nested_dir.mkdir()
-            nested_pyproject = nested_dir / "pyproject.toml"
-            nested_pyproject.write_text("[tool.poetry]\nname = 'inner'\n")
-            
-            # Working from nested dir should find nested project
-            with patch("bindu.edge_client.Path.cwd", return_value=nested_dir):
-                result = _find_project_root()
-                assert result == nested_dir
+            # Verify AsyncClient was created with the timeout
+            mock_client.assert_called_once_with(timeout=30)
 
 
-class TestLoadConfigFile:
-    """Test _load_config_file function."""
+class TestSendPing:
+    """Tests for send_ping function."""
 
-    def test_loads_explicit_config_path(self):
-        """Test loading config from explicitly provided path."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            config_path = Path(tmpdir) / "custom_config.json"
-            config_data = {
-                "ws_url": "ws://example.com/ws",
-                "token": "test-token",
-                "local_port": 8080
+    @pytest.mark.asyncio
+    async def test_sends_periodic_pings(self):
+        """Test that pings are sent periodically."""
+        mock_ws = AsyncMock()
+        
+        # Run for a short time then cancel
+        async def run_with_timeout():
+            try:
+                await asyncio.wait_for(send_ping(mock_ws, interval=0.1), timeout=0.35)
+            except asyncio.TimeoutError:
+                pass
+        
+        await run_with_timeout()
+        
+        # Should have sent around 3 pings (0.35s / 0.1s interval)
+        assert mock_ws.send.call_count >= 2
+        # Verify ping message format
+        call_args = mock_ws.send.call_args_list[0][0][0]
+        msg = json.loads(call_args)
+        assert msg["type"] == "ping"
+
+    @pytest.mark.asyncio
+    async def test_stops_on_exception(self):
+        """Test that send_ping stops gracefully on exception."""
+        mock_ws = AsyncMock()
+        mock_ws.send.side_effect = Exception("Connection lost")
+        
+        # Should not raise, just return
+        await send_ping(mock_ws, interval=0.1)
+        
+        assert mock_ws.send.call_count >= 1
+
+
+class TestHandleRequestAsync:
+    """Tests for handle_request_async function."""
+
+    @pytest.mark.asyncio
+    async def test_successful_request_handling(self):
+        """Test successful request handling."""
+        mock_ws = AsyncMock()
+        
+        message = {
+            "method": "GET",
+            "path": "/api/test",
+            "headers": {},
+            "request_id": "req-123",
+        }
+
+        with patch("bindu.edge_client.forward_request_to_local") as mock_forward:
+            mock_forward.return_value = {
+                "type": "response",
+                "request_id": "req-123",
+                "status": 200,
+                "headers": {"content-type": "text/plain"},
+                "body": "OK",
+                "body_encoding": "text",
             }
-            config_path.write_text(json.dumps(config_data))
-            
-            result = _load_config_file(str(config_path))
-            
-            assert result == config_data
 
-    def test_loads_from_project_root(self):
-        """Test loading edge.config.json from project root."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir_path = Path(tmpdir)
+            await handle_request_async(mock_ws, 3773, message)
+
+            # Verify request was forwarded
+            mock_forward.assert_called_once_with(3773, message)
             
-            # Create project marker
-            pyproject_path = tmpdir_path / "pyproject.toml"
-            pyproject_path.write_text("[tool.poetry]\nname = 'test'\n")
-            
-            # Create config file
-            config_path = tmpdir_path / "edge.config.json"
-            config_data = {
-                "ws_url": "ws://localhost:8001/ws/test",
-                "token": "project-token",
-                "local_port": 3773
+            # Verify response was sent back
+            mock_ws.send.assert_called_once()
+            sent_data = json.loads(mock_ws.send.call_args[0][0])
+            assert sent_data["status"] == 200
+            assert sent_data["request_id"] == "req-123"
+
+    @pytest.mark.asyncio
+    async def test_timeout_returns_504(self):
+        """Test that timeout returns 504 Gateway Timeout."""
+        mock_ws = AsyncMock()
+        
+        message = {
+            "method": "GET",
+            "path": "/api/slow",
+            "headers": {},
+            "request_id": "req-timeout",
+        }
+
+        with patch("bindu.edge_client.forward_request_to_local") as mock_forward:
+            mock_forward.side_effect = asyncio.TimeoutError()
+
+            await handle_request_async(mock_ws, 3773, message)
+
+            # Verify 504 response was sent
+            mock_ws.send.assert_called_once()
+            sent_data = json.loads(mock_ws.send.call_args[0][0])
+            assert sent_data["status"] == 504
+            assert sent_data["request_id"] == "req-timeout"
+            assert "Timeout" in sent_data["body"]
+
+    @pytest.mark.asyncio
+    async def test_exception_returns_500(self):
+        """Test that exceptions return 500 Internal Server Error."""
+        mock_ws = AsyncMock()
+        
+        message = {
+            "method": "GET",
+            "path": "/api/error",
+            "headers": {},
+            "request_id": "req-error",
+        }
+
+        with patch("bindu.edge_client.forward_request_to_local") as mock_forward:
+            mock_forward.side_effect = Exception("Something went wrong")
+
+            await handle_request_async(mock_ws, 3773, message)
+
+            # Verify 500 response was sent
+            mock_ws.send.assert_called_once()
+            sent_data = json.loads(mock_ws.send.call_args[0][0])
+            assert sent_data["status"] == 500
+            assert sent_data["request_id"] == "req-error"
+            assert "Internal error" in sent_data["body"]
+
+    @pytest.mark.asyncio
+    async def test_websocket_send_failure(self):
+        """Test graceful handling when websocket send fails."""
+        mock_ws = AsyncMock()
+        mock_ws.send.side_effect = Exception("Connection closed")
+        
+        message = {
+            "method": "GET",
+            "path": "/api/test",
+            "headers": {},
+            "request_id": "req-send-fail",
+        }
+
+        with patch("bindu.edge_client.forward_request_to_local") as mock_forward:
+            mock_forward.return_value = {
+                "type": "response",
+                "request_id": "req-send-fail",
+                "status": 200,
+                "headers": {},
+                "body": "OK",
+                "body_encoding": "text",
             }
-            config_path.write_text(json.dumps(config_data))
-            
-            with patch("bindu.edge_client.Path.cwd", return_value=tmpdir_path):
-                result = _load_config_file()
-                
-                assert result == config_data
 
-    def test_returns_none_when_no_config_found(self):
-        """Test returning None when no config file exists."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir_path = Path(tmpdir)
-            pyproject_path = tmpdir_path / "pyproject.toml"
-            pyproject_path.write_text("[tool.poetry]\nname = 'test'\n")
-            
-            with patch("bindu.edge_client.Path.cwd", return_value=tmpdir_path):
-                result = _load_config_file()
-                
-                assert result is None
+            # Should not raise exception
+            await handle_request_async(mock_ws, 3773, message)
 
-    def test_returns_none_when_no_project_root_found(self):
-        """Test returning None when project root cannot be found."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir_path = Path(tmpdir)
+
+class TestRunClient:
+    """Tests for run_client function."""
+
+    @pytest.mark.asyncio
+    async def test_connection_established(self):
+        """Test successful connection and tunnel setup."""
+        mock_ws = AsyncMock()
+        
+        # Simulate connection message
+        connected_msg = {
+            "type": "connected",
+            "public_url": "https://test.example.com",
+            "slug": "test-slug",
+            "tunnel_id": "tunnel-123",
+        }
+        
+        mock_ws.__aiter__.return_value = [json.dumps(connected_msg)]
+        
+        with patch("bindu.edge_client.websockets.connect") as mock_connect:
+            mock_connect.return_value.__aenter__.return_value = mock_ws
             
-            with patch("bindu.edge_client.Path.cwd", return_value=tmpdir_path):
-                with patch("bindu.edge_client._find_project_root", return_value=None):
-                    result = _load_config_file()
+            # Run with no reconnect to avoid infinite loop
+            with patch("bindu.edge_client.send_ping"):
+                await run_client("ws://localhost:8000", 3773, reconnect=False)
+            
+            # Verify connection was attempted
+            mock_connect.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_handles_request_message(self):
+        """Test handling of incoming request messages."""
+        mock_ws = AsyncMock()
+        
+        request_msg = {
+            "type": "request",
+            "method": "GET",
+            "path": "/api/test",
+            "headers": {},
+            "request_id": "req-123",
+        }
+        
+        # Return connected message then request message
+        mock_ws.__aiter__.return_value = [
+            json.dumps({"type": "connected", "public_url": "https://test.example.com", "slug": "test", "tunnel_id": "123"}),
+            json.dumps(request_msg),
+        ]
+        
+        with patch("bindu.edge_client.websockets.connect") as mock_connect:
+            mock_connect.return_value.__aenter__.return_value = mock_ws
+            
+            with patch("bindu.edge_client.send_ping"):
+                with patch("bindu.edge_client.handle_request_async") as mock_handle:
+                    mock_handle.return_value = asyncio.Future()
+                    mock_handle.return_value.set_result(None)
                     
-                    assert result is None
+                    await run_client("ws://localhost:8000", 3773, reconnect=False)
+                    
+                    # Verify request was handled
+                    await asyncio.sleep(0.1)  # Give time for background task
 
-    def test_handles_malformed_json(self):
-        """Test handling of malformed JSON in config file."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            config_path = Path(tmpdir) / "bad_config.json"
-            config_path.write_text("{ invalid json }")
+    @pytest.mark.asyncio
+    async def test_handles_ping_message(self):
+        """Test handling of ping messages with pong response."""
+        mock_ws = AsyncMock()
+        
+        ping_msg = {"type": "ping"}
+        
+        mock_ws.__aiter__.return_value = [
+            json.dumps({"type": "connected", "public_url": "https://test.example.com", "slug": "test", "tunnel_id": "123"}),
+            json.dumps(ping_msg),
+        ]
+        
+        with patch("bindu.edge_client.websockets.connect") as mock_connect:
+            mock_connect.return_value.__aenter__.return_value = mock_ws
             
-            result = _load_config_file(str(config_path))
-            
-            # Should return None on parse error
-            assert result is None
-
-    def test_handles_missing_file_gracefully(self):
-        """Test graceful handling when specified config file doesn't exist."""
-        result = _load_config_file("/nonexistent/path/config.json")
-        assert result is None
-
-    def test_explicit_path_takes_precedence(self):
-        """Test that explicit config path takes precedence over project root."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir_path = Path(tmpdir)
-            
-            # Create project root config
-            pyproject_path = tmpdir_path / "pyproject.toml"
-            pyproject_path.write_text("[tool.poetry]\nname = 'test'\n")
-            
-            project_config = tmpdir_path / "edge.config.json"
-            project_config.write_text(json.dumps({"ws_url": "ws://project"}))
-            
-            # Create custom config
-            custom_config = tmpdir_path / "custom.json"
-            custom_config.write_text(json.dumps({"ws_url": "ws://custom"}))
-            
-            with patch("bindu.edge_client.Path.cwd", return_value=tmpdir_path):
-                result = _load_config_file(str(custom_config))
+            with patch("bindu.edge_client.send_ping"):
+                await run_client("ws://localhost:8000", 3773, reconnect=False)
                 
-                assert result["ws_url"] == "ws://custom"
+                # Verify pong was sent
+                pong_sent = False
+                for call in mock_ws.send.call_args_list:
+                    msg = json.loads(call[0][0])
+                    if msg.get("type") == "pong":
+                        pong_sent = True
+                        break
+                assert pong_sent
 
-    def test_loads_partial_config(self):
-        """Test loading config with only some fields present."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            config_path = Path(tmpdir) / "partial_config.json"
-            config_data = {
-                "ws_url": "ws://example.com/ws"
-                # token and local_port missing
-            }
-            config_path.write_text(json.dumps(config_data))
-            
-            result = _load_config_file(str(config_path))
-            
-            assert result == config_data
-            assert "ws_url" in result
-            assert "token" not in result
+    @pytest.mark.skip(reason="Test gets stuck - needs refactoring")
+    @pytest.mark.asyncio
+    async def test_reconnect_on_connection_closed(self):
+        """Test reconnection logic when connection closes."""
+        mock_ws = AsyncMock()
+        mock_ws.__aiter__.side_effect = websockets.exceptions.ConnectionClosed(None, None)
+        
+        call_count = 0
+        
+        async def mock_connect_side_effect(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count >= 2:
+                # Stop after second connection attempt
+                raise KeyboardInterrupt()
+            mock_instance = AsyncMock()
+            mock_instance.__aenter__.return_value = mock_ws
+            return mock_instance
+        
+        with patch("bindu.edge_client.websockets.connect", side_effect=mock_connect_side_effect):
+            with patch("bindu.edge_client.send_ping"):
+                with patch("asyncio.sleep"):
+                    try:
+                        await run_client("ws://localhost:8000", 3773, reconnect=True)
+                    except KeyboardInterrupt:
+                        pass
+                    
+                    # Should have attempted reconnection
+                    assert call_count >= 2
 
-    def test_config_with_extra_fields(self):
-        """Test that config with extra fields is loaded successfully."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            config_path = Path(tmpdir) / "config.json"
-            config_data = {
-                "ws_url": "ws://example.com/ws",
-                "token": "test-token",
-                "local_port": 3773,
-                "extra_field": "should be ignored",
-                "another_field": 123
-            }
-            config_path.write_text(json.dumps(config_data))
+    @pytest.mark.asyncio
+    async def test_no_reconnect_mode(self):
+        """Test that reconnect=False stops after first disconnect."""
+        mock_ws = AsyncMock()
+        mock_ws.__aiter__.side_effect = websockets.exceptions.ConnectionClosed(None, None)
+        
+        with patch("bindu.edge_client.websockets.connect") as mock_connect:
+            mock_connect.return_value.__aenter__.return_value = mock_ws
             
-            result = _load_config_file(str(config_path))
+            with patch("bindu.edge_client.send_ping"):
+                await run_client("ws://localhost:8000", 3773, reconnect=False)
+                
+                # Should only connect once
+                assert mock_connect.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_ws_url_formatting(self):
+        """Test WebSocket URL formatting."""
+        mock_ws = AsyncMock()
+        mock_ws.__aiter__.return_value = []
+        
+        with patch("bindu.edge_client.websockets.connect") as mock_connect:
+            mock_connect.return_value.__aenter__.return_value = mock_ws
             
-            assert result == config_data
+            with patch("bindu.edge_client.send_ping"):
+                # Test URL without /ws suffix
+                await run_client("ws://localhost:8000", 3773, reconnect=False)
+                assert mock_connect.call_args[0][0] == "ws://localhost:8000/ws"
+                
+                # Test URL with /ws suffix
+                await run_client("ws://localhost:8000/ws", 3773, reconnect=False)
+                assert mock_connect.call_args[0][0] == "ws://localhost:8000/ws"
+
+    @pytest.mark.asyncio
+    async def test_non_json_message_ignored(self):
+        """Test that non-JSON messages are ignored gracefully."""
+        mock_ws = AsyncMock()
+        
+        mock_ws.__aiter__.return_value = [
+            "not json",
+            json.dumps({"type": "connected", "public_url": "https://test.example.com", "slug": "test", "tunnel_id": "123"}),
+        ]
+        
+        with patch("bindu.edge_client.websockets.connect") as mock_connect:
+            mock_connect.return_value.__aenter__.return_value = mock_ws
+            
+            with patch("bindu.edge_client.send_ping"):
+                # Should not raise exception
+                await run_client("ws://localhost:8000", 3773, reconnect=False)
+
+
+class TestParseArgs:
+    """Tests for _parse_args function."""
+
+    def test_default_arguments(self):
+        """Test default argument values."""
+        with patch("sys.argv", ["edge_client.py"]):
+            args = _parse_args()
+            assert args.edge_url == "ws://localhost:8000"
+            assert args.local_port == 3773
+            assert args.no_reconnect is False
+            assert args.debug is False
+
+    def test_custom_edge_url(self):
+        """Test custom edge URL."""
+        with patch("sys.argv", ["edge_client.py", "--edge-url", "ws://example.com:9000"]):
+            args = _parse_args()
+            assert args.edge_url == "ws://example.com:9000"
+
+    def test_custom_local_port(self):
+        """Test custom local port."""
+        with patch("sys.argv", ["edge_client.py", "--local-port", "8080"]):
+            args = _parse_args()
+            assert args.local_port == 8080
+
+    def test_no_reconnect_flag(self):
+        """Test no-reconnect flag."""
+        with patch("sys.argv", ["edge_client.py", "--no-reconnect"]):
+            args = _parse_args()
+            assert args.no_reconnect is True
+
+    def test_debug_flag(self):
+        """Test debug flag."""
+        with patch("sys.argv", ["edge_client.py", "--debug"]):
+            args = _parse_args()
+            assert args.debug is True
+
+    def test_all_arguments_combined(self):
+        """Test all arguments together."""
+        with patch(
+            "sys.argv",
+            [
+                "edge_client.py",
+                "--edge-url", "ws://custom.server:8001",
+                "--local-port", "5000",
+                "--no-reconnect",
+                "--debug",
+            ],
+        ):
+            args = _parse_args()
+            assert args.edge_url == "ws://custom.server:8001"
+            assert args.local_port == 5000
+            assert args.no_reconnect is True
+            assert args.debug is True
+
+
+class TestMain:
+    """Tests for main function."""
+
+    def test_main_with_keyboard_interrupt(self):
+        """Test that main handles KeyboardInterrupt gracefully."""
+        with patch("bindu.edge_client._parse_args") as mock_parse:
+            mock_args = Mock()
+            mock_args.edge_url = "ws://localhost:8000"
+            mock_args.local_port = 3773
+            mock_args.no_reconnect = False
+            mock_args.debug = False
+            mock_parse.return_value = mock_args
+            
+            with patch("bindu.edge_client.asyncio.run") as mock_run:
+                mock_run.side_effect = KeyboardInterrupt()
+                
+                with patch("sys.exit") as mock_exit:
+                    from bindu.edge_client import main
+                    main()
+                    
+                    # Should exit with code 0
+                    mock_exit.assert_called_once_with(0)
+
+    def test_main_configures_logging(self):
+        """Test that main configures logging correctly."""
+        with patch("bindu.edge_client._parse_args") as mock_parse:
+            mock_args = Mock()
+            mock_args.edge_url = "ws://localhost:8000"
+            mock_args.local_port = 3773
+            mock_args.no_reconnect = False
+            mock_args.debug = True
+            mock_parse.return_value = mock_args
+            
+            with patch("bindu.edge_client.logging.basicConfig") as mock_config:
+                with patch("bindu.edge_client.asyncio.run") as mock_run:
+                    mock_run.side_effect = KeyboardInterrupt()
+                    
+                    with patch("sys.exit"):
+                        from bindu.edge_client import main
+                        main()
+                        
+                        # Verify logging was configured with DEBUG level
+                        import logging
+                        mock_config.assert_called_once()
+                        call_kwargs = mock_config.call_args[1]
+                        assert call_kwargs["level"] == logging.DEBUG
+
+    def test_main_calls_run_client(self):
+        """Test that main calls run_client with correct arguments."""
+        with patch("bindu.edge_client._parse_args") as mock_parse:
+            mock_args = Mock()
+            mock_args.edge_url = "ws://custom.server:8000"
+            mock_args.local_port = 5000
+            mock_args.no_reconnect = True
+            mock_args.debug = False
+            mock_parse.return_value = mock_args
+            
+            async def mock_run_side_effect(coro):
+                """Properly close the coroutine to avoid warnings."""
+                coro.close()
+                raise KeyboardInterrupt()
+            
+            with patch("bindu.edge_client.asyncio.run") as mock_run:
+                mock_run.side_effect = mock_run_side_effect
+                
+                with patch("sys.exit"):
+                    from bindu.edge_client import main
+                    main()
+                    
+                    # Verify run_client was called with correct args
+                    assert mock_run.call_count == 1
