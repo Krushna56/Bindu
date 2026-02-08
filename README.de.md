@@ -373,64 +373,6 @@ Ausgabe:
 
 <br/>
 
-## 🌐 Edge Client - Machen Sie Ihren lokalen Agenten im Internet zugänglich
-
-Machen Sie Ihren lokal laufenden Agenten **ohne Deployment** im Internet zugänglich - perfekt für Entwicklung, Tests und schnelle Demos. Der Bindu Edge Client erstellt einen sicheren Tunnel von Ihrer lokalen Maschine zum Internet über WebSocket-Verbindungen.
-
-### 🎯 Anwendungsfälle
-
-- **Schnelles Testen**: Teilen Sie Ihren lokalen Agenten mit anderen ohne Deployment
-- **Entwicklung**: Testen Sie Webhooks und Integrationen, die öffentliche URLs erfordern
-- **Demos**: Präsentieren Sie Ihren lokal laufenden Agenten Kunden
-- **Debugging**: Testen Sie Ihren Agenten in einer produktionsähnlichen Umgebung
-
-### 🚀 Schnellstart
-
-**Schritt 1: Tunnel erstellen**
-
-Besuchen Sie [bindus.directory](https://bindus.directory) und:
-1. Melden Sie sich in Ihrem Konto an
-2. Navigieren Sie zum Tunnels-Bereich
-3. Erstellen Sie einen neuen Tunnel
-
-Sie erhalten:
-- **ws_url**: WebSocket-URL für die Tunnel-Verbindung
-- **token**: Authentifizierungstoken für sicheren Zugriff
-- **public_url**: Die öffentliche Internet-URL Ihres Agenten
-
-**Schritt 2: Konfigurieren Sie Ihren lokalen Agenten**
-
-Erstellen Sie eine `edge.config.json`-Datei in Ihrem Projektverzeichnis:
-
-```json
-{
-  "ws_url": "your_ws_url",
-  "token": "your_tunnel_token",
-  "local_port": 3773
-}
-```
-
-> **Hinweis:** `local_port` ist standardmäßig `3773` (Bindu's Standard-Port). Ändern Sie dies, wenn Ihr Agent auf einem anderen Port läuft.
-
-**Schritt 3: Starten Sie den Edge Client**
-
-Stellen Sie sicher, dass Ihr Agent lokal läuft, und starten Sie dann den Edge Client:
-
-```bash
-uv run python -m bindu.edge_client
-```
-
-**Das war's!** 🎉 Ihr Agent ist jetzt über die `public_url`, die während der Tunnel-Erstellung bereitgestellt wurde, im Internet zugänglich.
-
-### 🔒 Sicherheit
-
-- Alle Verbindungen sind durch token-basierte Authentifizierung gesichert
-- WebSocket-Verbindungen verwenden sichere Protokolle
-- Nur autorisierte Anfragen werden an Ihren lokalen Agenten weitergeleitet
-
----
-
-<br/>
 
 ## [Postgres Storage](https://docs.getbindu.com/bindu/learn/storage/overview)
 

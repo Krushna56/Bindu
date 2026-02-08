@@ -372,64 +372,6 @@ Salida:
 
 <br/>
 
-## 🌐 Edge Client - Expone tu Agente Local a Internet
-
-Haz que tu agente local sea accesible en Internet **sin desplegar** - perfecto para desarrollo, pruebas y demos rápidas. El Bindu Edge Client crea un túnel seguro desde tu máquina local a Internet usando conexiones WebSocket.
-
-### 🎯 Casos de Uso
-
-- **Pruebas Rápidas**: Comparte tu agente local con otros sin desplegar
-- **Desarrollo**: Prueba webhooks e integraciones que requieren URLs públicas
-- **Demos**: Muestra tu agente corriendo en tu máquina local a clientes
-- **Depuración**: Prueba tu agente en un entorno similar a producción
-
-### 🚀 Configuración Rápida
-
-**Paso 1: Crear un Túnel**
-
-Visita [bindus.directory](https://bindus.directory) y:
-1. Inicia sesión en tu cuenta
-2. Navega a la sección de túneles
-3. Crea un nuevo túnel
-
-Recibirás:
-- **ws_url**: URL de WebSocket para la conexión del túnel
-- **token**: Token de autenticación para acceso seguro
-- **public_url**: La URL pública de Internet de tu agente
-
-**Paso 2: Configurar tu Agente Local**
-
-Crea un archivo `edge.config.json` en el directorio de tu proyecto:
-
-```json
-{
-  "ws_url": "your_ws_url",
-  "token": "your_tunnel_token",
-  "local_port": 3773
-}
-```
-
-> **Nota:** `local_port` por defecto es `3773` (puerto predeterminado de Bindu). Cambia esto si tu agente corre en un puerto diferente.
-
-**Paso 3: Iniciar el Edge Client**
-
-Asegúrate de que tu agente esté corriendo localmente, luego inicia el edge client:
-
-```bash
-uv run python -m bindu.edge_client
-```
-
-**¡Eso es todo!** 🎉 Tu agente ahora es accesible en Internet en la `public_url` proporcionada durante la creación del túnel.
-
-### 🔒 Seguridad
-
-- Todas las conexiones están aseguradas con autenticación basada en tokens
-- Las conexiones WebSocket usan protocolos seguros
-- Solo las solicitudes autorizadas se envían a tu agente local
-
----
-
-<br/>
 
 ## [Postgres Storage](https://docs.getbindu.com/bindu/learn/storage/overview)
 

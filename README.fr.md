@@ -372,64 +372,6 @@ Sortie :
 
 <br/>
 
-## 🌐 Edge Client - Exposez votre Agent Local sur Internet
-
-Rendez votre agent local accessible sur Internet **sans déploiement** - parfait pour le développement, les tests et les démos rapides. Le Bindu Edge Client crée un tunnel sécurisé depuis votre machine locale vers Internet en utilisant des connexions WebSocket.
-
-### 🎯 Cas d'Usage
-
-- **Tests Rapides**: Partagez votre agent local avec d'autres sans déploiement
-- **Développement**: Testez les webhooks et intégrations nécessitant des URLs publiques
-- **Démos**: Présentez votre agent s'exécutant sur votre machine locale aux clients
-- **Débogage**: Testez votre agent dans un environnement similaire à la production
-
-### 🚀 Configuration Rapide
-
-**Étape 1: Créer un Tunnel**
-
-Visitez [bindus.directory](https://bindus.directory) et:
-1. Connectez-vous à votre compte
-2. Accédez à la section tunnels
-3. Créez un nouveau tunnel
-
-Vous recevrez:
-- **ws_url**: URL WebSocket pour la connexion du tunnel
-- **token**: Token d'authentification pour un accès sécurisé
-- **public_url**: L'URL Internet publique de votre agent
-
-**Étape 2: Configurer votre Agent Local**
-
-Créez un fichier `edge.config.json` dans le répertoire de votre projet:
-
-```json
-{
-  "ws_url": "your_ws_url",
-  "token": "your_tunnel_token",
-  "local_port": 3773
-}
-```
-
-> **Note:** `local_port` est par défaut `3773` (port par défaut de Bindu). Modifiez ceci si votre agent s'exécute sur un port différent.
-
-**Étape 3: Démarrer le Edge Client**
-
-Assurez-vous que votre agent s'exécute localement, puis démarrez le edge client:
-
-```bash
-uv run python -m bindu.edge_client
-```
-
-**C'est tout!** 🎉 Votre agent est maintenant accessible sur Internet à la `public_url` fournie lors de la création du tunnel.
-
-### 🔒 Sécurité
-
-- Toutes les connexions sont sécurisées avec une authentification par token
-- Les connexions WebSocket utilisent des protocoles sécurisés
-- Seules les requêtes autorisées sont transmises à votre agent local
-
----
-
-<br/>
 
 ## [Postgres Storage](https://docs.getbindu.com/bindu/learn/storage/overview)
 
