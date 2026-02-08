@@ -1,33 +1,16 @@
 """Bindu Edge Tunnel Client - Gradio-Style Ephemeral Tunnels
 
 Connects to Bindu Edge Gateway and automatically establishes an ephemeral tunnel.
-No pre-registration needed - just connect and get your public URL!
 
 Usage:
-  # Basic usage (connects to localhost:8000, forwards to localhost:3773):
-  python bindu_edge_client.py
+  # Basic usage (by default connects to localhost:8000, forwards to localhost:3773):
+  uv run python -m bindu.edge_client
   
   # Custom edge server and local port:
-  python bindu_edge_client.py --edge-url wss://edge.example.com --local-port 8080
+   uv run python -m bindu.edge_client --edge-url ws://localhost:8001 --local-port 3773
   
   # With debug logging:
-  python bindu_edge_client.py --debug
-
-Examples:
-  # Development (local edge server):
-  python bindu_edge_client.py --edge-url ws://localhost:8000
-  
-  # Production:
-  python bindu_edge_client.py --edge-url wss://bindus.getbindu.com --local-port 8080
-
-Features:
-- ✅ No config files needed - just CLI args
-- ✅ No pre-registration or tokens
-- ✅ Auto-generates tunnel on connection
-- ✅ Displays public URL immediately
-- ✅ Binary-safe (handles images, PDFs, etc.)
-- ✅ Auto-reconnects on failure
-- ✅ Graceful shutdown
+  uv run python -m bindu.edge_client --debug
 
 Architecture:
 - Gradio-style ephemeral tunneling
@@ -346,17 +329,6 @@ def _parse_args():
         description="Bindu Edge Tunnel Client - Gradio-Style Ephemeral Tunnels",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Examples:
-  # Development (local edge server):
-  python bindu_edge_client.py
-  
-  # Production:
-  python bindu_edge_client.py --edge-url wss://bindus.getbindu.com
-  
-  # Custom local port:
-  python bindu_edge_client.py --local-port 8080
-
-Note: No config files or tokens needed! Just connect and get your public URL.
         """
     )
     p.add_argument(
