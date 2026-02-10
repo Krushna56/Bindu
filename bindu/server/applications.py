@@ -25,9 +25,8 @@ from uuid import UUID, uuid4
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.requests import Request
-from starlette.responses import FileResponse, Response
+from starlette.responses import Response
 from starlette.routing import Route
-from starlette.staticfiles import StaticFiles
 from starlette.types import Lifespan, Receive, Scope, Send
 
 from bindu.common.models import (
@@ -159,7 +158,6 @@ class BinduApplication(Starlette):
 
     def _register_routes(self) -> None:
         """Register all application routes."""
-        from pathlib import Path
         from .endpoints import (
             agent_card_endpoint,
             agent_run_endpoint,
@@ -227,12 +225,6 @@ class BinduApplication(Starlette):
         # Favicon endpoint
         self._add_route("/favicon.ico", self._favicon_endpoint, ["GET"], with_app=False)
 
-        # Static files for CSS/JS
-        static_dir = Path(__file__).parent.parent / "ui" / "static"
-        if static_dir.exists():
-            self.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
-            logger.info(f"Serving static files from: {static_dir}")
-
         if self._x402_ext:
             self._register_payment_endpoints()
 
@@ -289,35 +281,6 @@ class BinduApplication(Starlette):
         """Wrap endpoint that requires app instance."""
         return await endpoint(self, request)
 
-    async def _docs_endpoint(self, request: Request) -> Response:
-        """Serve the chat UI documentation interface."""
-        from pathlib import Path
-
-        # Try modular version first, fallback to monolithic
-        docs_path = Path(__file__).parent.parent / "ui" / "static" / "chat.html"
-
-        if not docs_path.exists():
-            logger.error(f"Chat UI file not found: {docs_path}")
-            return Response(
-                content="Chat UI not available. File not found.",
-                status_code=404,
-                media_type="text/plain",
-            )
-
-        logger.debug(f"Serving chat UI from: {docs_path}")
-        return FileResponse(docs_path, media_type="text/html")
-
-    async def _favicon_endpoint(self, request: Request) -> Response:
-        """Serve the Bindu sunflower SVG as favicon."""
-        from pathlib import Path
-
-        favicon_path = Path(__file__).parent.parent.parent / "assets" / "light.svg"
-
-        if not favicon_path.exists():
-            logger.warning(f"Favicon not found: {favicon_path}")
-            return Response(content="", status_code=404)
-
-        return FileResponse(favicon_path, media_type="image/svg+xml")
 
     def _create_default_lifespan(
         self,

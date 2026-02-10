@@ -179,27 +179,17 @@ class TestBinduApplicationEndpoints:
     """Test BinduApplication built-in endpoints."""
 
     @pytest.mark.asyncio
-    async def test_docs_endpoint_file_exists(self, mock_manifest):
-        """Test docs endpoint when file exists."""
+    async def test_docs_endpoint(self, mock_manifest):
+        """Test docs endpoint returns basic agent information."""
         app = BinduApplication(manifest=mock_manifest)
         request = MagicMock(spec=Request)
 
-        with patch("pathlib.Path.exists", return_value=True):
-            response = await app._docs_endpoint(request)
+        response = await app._docs_endpoint(request)
 
-            assert isinstance(response, (FileResponse, Response))
-
-    @pytest.mark.asyncio
-    async def test_docs_endpoint_file_not_found(self, mock_manifest):
-        """Test docs endpoint when file doesn't exist."""
-        app = BinduApplication(manifest=mock_manifest)
-        request = MagicMock(spec=Request)
-
-        with patch("pathlib.Path.exists", return_value=False):
-            response = await app._docs_endpoint(request)
-
-            assert isinstance(response, Response)
-            assert response.status_code == 404
+        assert isinstance(response, Response)
+        assert response.status_code == 200
+        assert response.media_type == "text/html"
+        assert mock_manifest.name in response.body.decode()
 
     @pytest.mark.asyncio
     async def test_favicon_endpoint_file_exists(self, mock_manifest):
