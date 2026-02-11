@@ -336,6 +336,119 @@ except nacl.exceptions.BadSignatureError:
 - Medical agents can sign diagnoses with legal validity
 - Research agents can sign findings with attribution
 
+### DID Signatures in Task Responses
+
+When an agent completes a task, the response includes a cryptographic signature in the artifact metadata. This proves the message authenticity without requiring you to manually verify it.
+
+**Example Task Response with DID Signature:**
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": "550e8400-e29b-41d4-a716-446655440025",
+    "result": {
+        "id": "550e8400-e29b-41d4-a716-446655440302",
+        "context_id": "550e8400-e29b-41d4-a716-446655440038",
+        "kind": "task",
+        "status": {
+            "state": "completed",
+            "timestamp": "2026-02-11T13:33:28.151107+00:00"
+        },
+        "history": [
+            {
+                "kind": "message",
+                "role": "user",
+                "parts": [{"kind": "text", "text": "capital of india"}]
+            },
+            {
+                "kind": "message",
+                "role": "assistant",
+                "parts": [
+                    {
+                        "kind": "text",
+                        "text": "The capital of India is **New Delhi**."
+                    }
+                ]
+            }
+        ],
+        "artifacts": [
+            {
+                "name": "result",
+                "parts": [
+                    {
+                        "kind": "text",
+                        "text": "The capital of India is **New Delhi**.",
+                        "metadata": {
+                            "did.message.signature": "1BwPTcakncjnnyz5MhACUGdpLqEp59TudTKTrTeNeRmxuftxKKRjRLN6bytNtLahB5vANL8u7Lv19sYW92RHJj5"
+                        }
+                    }
+                ],
+                "artifact_id": "807e4218-155f-4ffb-b880-08f60f3b2c4b"
+            }
+        ]
+    }
+}
+```
+
+**Key Field: `did.message.signature`**
+
+Located in `result.artifacts[].parts[].metadata`, this field contains:
+- **Base58-encoded signature** of the message content
+- **Signed by the agent's private key** (which only the agent possesses)
+- **Verifiable using the agent's public key** from their DID document
+
+**What This Signature Proves:**
+
+1. **Authenticity** - The message definitely came from the agent with this DID
+2. **Integrity** - The message hasn't been tampered with since signing
+3. **Non-repudiation** - The agent cannot deny sending this message
+4. **Timestamp validity** - The message was created at the stated time
+
+**Verifying the Signature:**
+
+```python
+import nacl.signing
+import base58
+import json
+
+async def verify_task_response(task_response):
+    """Verify a task response signature"""
+    # Extract the signature
+    artifact = task_response["result"]["artifacts"][0]
+    part = artifact["parts"][0]
+    message_text = part["text"]
+    signature_b58 = part["metadata"]["did.message.signature"]
+    
+    # Get the agent's DID from the task (you'd get this from the agent card)
+    agent_did = "did:bindu:gaurikasethi88_at_gmail_com:echo_agent:352c17d030fb4bf1ab33d04b102aef3d"
+    
+    # Resolve DID to get public key
+    did_doc = await resolve_did(agent_did)
+    public_key_b58 = did_doc["authentication"][0]["publicKeyBase58"]
+    public_key = nacl.signing.VerifyKey(base58.b58decode(public_key_b58))
+    
+    # Verify the signature
+    try:
+        message_bytes = message_text.encode('utf-8')
+        signature_bytes = base58.b58decode(signature_b58)
+        public_key.verify(message_bytes, signature_bytes)
+        print("✓ Signature valid! Response is authentic.")
+        return True
+    except nacl.exceptions.BadSignatureError:
+        print("✗ Invalid signature! Response may be forged.")
+        return False
+
+# Usage
+is_valid = await verify_task_response(task_response)
+```
+
+**When Signatures Are Added:**
+
+- **Automatically** - Bindu agents sign all responses by default when DID is configured
+- **Transparent** - No extra code needed in your agent implementation
+- **Optional verification** - Clients can verify signatures but don't have to
+- **Audit trail** - Signatures provide cryptographic proof for compliance/legal needs
+
 ### 2. Agent Discovery - Finding the Right Agent
 
 **Scenario:** You need a PDF processing agent. How do you find trustworthy ones?
