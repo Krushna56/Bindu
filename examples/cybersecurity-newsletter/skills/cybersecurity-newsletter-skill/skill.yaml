@@ -1,0 +1,251 @@
+# Cybersecurity Newsletter Skill
+# Provides question answering and summarization for cybersecurity topics
+
+# Basic Metadata
+id: cybersecurity-newsletter-skill-v1
+name: cybersecurity-newsletter-skill
+version: 1.0.0
+author: raahul@getbindu.com
+
+# Description
+description: |
+  All-in-one skill for the Cybersecurity Newsletter Editor agent.
+  Handles both factual question answering and summarization for cybersecurity
+  topics including threats, CVEs, attack vectors, and security news.
+
+  Leverages live web search via DuckDuckGo to provide up-to-date answers
+  and concise summaries of the latest vulnerabilities and threat intelligence.
+
+# Tags and Modes
+tags:
+  - qa
+  - summarization
+  - cybersecurity
+  - threat-intelligence
+  - nlp
+  - reasoning
+
+input_modes:
+  - text/plain
+  - application/json
+
+output_modes:
+  - text/plain
+  - application/json
+
+# Example Queries
+examples:
+  - "What is a zero-day vulnerability?"
+  - "How does ransomware work?"
+  - "Summarize the latest ransomware threat report"
+  - "Give me a brief overview of this CVE advisory"
+  - "What are the key takeaways from this security incident?"
+  - "Explain the MITRE ATT\u0026CK framework"
+  - "Condense this week's cybersecurity news into key points"
+
+# Detailed Capabilities
+capabilities_detail:
+  cybersecurity_qa:
+    supported: true
+    types:
+      - what
+      - who
+      - where
+      - when
+      - how
+      - why
+    description: "Answers direct factual questions about cybersecurity topics"
+
+  cve_lookup:
+    supported: true
+    description: "Retrieves and explains CVE advisories, severity scores, and patch status"
+
+  threat_analysis:
+    supported: true
+    types:
+      - threat_actors
+      - attack_vectors
+      - malware_families
+    description: "Answers questions about threat intelligence and attack techniques"
+
+  threat_report_summarization:
+    supported: true
+    description: "Condenses long threat reports into actionable summaries"
+
+  cve_advisory_summarization:
+    supported: true
+    description: "Summarizes CVE advisories with severity, impact, and remediation"
+
+  news_digest:
+    supported: true
+    description: "Creates concise digests from multiple cybersecurity news sources"
+
+  key_point_extraction:
+    supported: true
+    description: "Identifies and preserves the most critical security information"
+
+  domains:
+    - network_security
+    - application_security
+    - cloud_security
+    - endpoint_security
+    - incident_response
+
+# Requirements
+requirements:
+  packages: []
+  system: []
+  min_memory_mb: 100
+
+# Performance Metrics
+performance:
+  avg_processing_time_ms: 1000
+  max_concurrent_requests: 10
+  memory_per_request_mb: 100
+  scalability: horizontal
+
+# Tool Restrictions
+allowed_tools:
+  - Read
+  - Search
+  - Reason
+
+# Documentation
+documentation:
+  overview: |
+    This skill enables the Cybersecurity Newsletter Editor agent to answer
+    cybersecurity questions and summarize threat reports, CVE advisories, and
+    security news — all using live web search and LLM reasoning.
+
+  use_cases:
+    when_to_use:
+      - User asks a factual question about cybersecurity
+      - User needs an explanation of a CVE or vulnerability
+      - User wants to understand an attack vector or technique
+      - User needs a summary of a long threat report or advisory
+      - User asks for a digest of recent cybersecurity news
+      - User wants key takeaways from a security incident
+
+    when_not_to_use:
+      - Generating full newsletters (handled by the agent's core instructions)
+      - Non-cybersecurity topics
+
+  input_structure: |
+    Plain text:
+    "What is a zero-day vulnerability?"
+    "Summarize the latest ransomware threats"
+
+    Structured JSON:
+    {
+      "question": "What is CVE-2024-12345?",
+      "detail_level": "brief|detailed|comprehensive"
+    }
+
+  output_format: |
+    Standard response (JSON):
+    {
+      "answer": "...",
+      "key_points": ["...", "..."],
+      "confidence": 0.93,
+      "sources": ["web_search"]
+    }
+
+  quality_guidelines:
+    - "Accuracy: Preserve CVE IDs, CVSS scores, and technical details"
+    - "Timeliness: Use web search for the latest threat data"
+    - "Clarity: Use clear language for both security professionals and learners"
+    - "Actionability: Highlight what security teams should do"
+    - "Honesty: Acknowledge uncertainty when information is incomplete"
+
+  error_handling:
+    - "Ambiguous questions: Ask for clarification on scope or specific product"
+    - "No results: Indicate limited data and suggest alternative queries"
+    - "Too broad: Suggest narrowing to a specific threat category"
+
+  examples:
+    - title: "CVE Question"
+      input: "What is CVE-2024-3094?"
+      output:
+        answer: "CVE-2024-3094 is a critical supply chain vulnerability in XZ Utils (CVSS 10.0)..."
+        confidence: 0.95
+        sources: ["web_search"]
+
+    - title: "Threat Report Summary"
+      input: "Summarize the latest ransomware threats this week"
+      output:
+        summary: "Three major ransomware campaigns were active this week..."
+        key_points:
+          - "LockBit 4.0 — healthcare sector, double extortion"
+          - "Akira — Cisco VPN exploit, CVE-2023-20269"
+          - "CISA advisory with updated IOCs and mitigation steps"
+        sources: ["web_search"]
+
+# Assessment fields for skill negotiation
+assessment:
+  keywords:
+    - question
+    - answer
+    - what
+    - why
+    - how
+    - who
+    - explain
+    - knowledge
+    - fact
+    - summarize
+    - summary
+    - brief
+    - overview
+    - digest
+    - tldr
+    - key points
+    - condense
+    - takeaways
+    - cybersecurity
+    - vulnerability
+    - threat
+    - cve
+    - attack
+    - malware
+    - security
+    - ransomware
+    - threat report
+
+  specializations:
+    - domain: cybersecurity_questions
+      confidence_boost: 0.4
+    - domain: cve_questions
+      confidence_boost: 0.3
+    - domain: threat_report_summarization
+      confidence_boost: 0.3
+    - domain: news_digest
+      confidence_boost: 0.2
+
+  anti_patterns:
+    - "write a newsletter"
+    - "generate code"
+    - "calculate"
+    - "stock prices"
+    - "weather forecast"
+    - "write code"
+
+  complexity_indicators:
+    simple:
+      - "what is"
+      - "who is"
+      - "define"
+      - "summarize"
+      - "tldr"
+      - "key points"
+    medium:
+      - "how does"
+      - "why do"
+      - "explain"
+      - "difference between"
+      - "weekly digest"
+    complex:
+      - "analyze"
+      - "comprehensive explanation"
+      - "multi-source digest"
+      - "executive briefing"
+      - "attack chain"
